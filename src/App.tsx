@@ -1,5 +1,8 @@
+import { Layout } from './presentation/layout/Layout'
+import './App.css'
+
 function App() {
-  return <div className="bg-vscode-bg text-vscode-text h-full">Tailwind OK</div>
+  return <Layout />
 }
 
 export default App
