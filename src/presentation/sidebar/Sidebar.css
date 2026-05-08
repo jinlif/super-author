@@ -1,0 +1,32 @@
+.sidebar {
+  height: 100%;
+  background-color: #252526;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-right: 1px solid #3c3c3c;
+}
+
+.sidebar-header {
+  height: 35px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #858585;
+  font-weight: 600;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.sidebar-placeholder {
+  padding: 16px 20px;
+  color: #858585;
+  font-size: 13px;
+}
