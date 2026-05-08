@@ -44,7 +44,7 @@ export const useEditorStore = create<EditorStore>((set) => ({
       if (state.activeTabId === tabId) {
         if (newTabs.length > 0) {
           const newIdx = Math.min(idx, newTabs.length - 1)
-          newActiveId = newTabs[newIdx]!.id
+          newActiveId = newTabs[newIdx]?.id ?? null
         } else {
           newActiveId = null
         }

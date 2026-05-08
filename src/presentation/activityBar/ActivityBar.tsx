@@ -23,6 +23,7 @@ export function ActivityBar() {
     <div className="activity-bar">
       {items.map((item) => (
         <button
+          type="button"
           key={item.id}
           className={`activity-icon ${activeActivity === item.id ? 'active' : ''}`}
           onClick={() => setActiveActivity(item.id)}

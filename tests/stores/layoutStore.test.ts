@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { useLayoutStore } from '../../src/application/stores/layoutStore'
 
 describe('layoutStore', () => {

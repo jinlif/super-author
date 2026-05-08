@@ -14,14 +14,24 @@ export function EditorTabs() {
       {tabs.map((tab) => (
         <div
           key={tab.id}
+          role="tab"
+          aria-selected={tab.id === activeTabId}
+          tabIndex={0}
           className={`editor-tab ${tab.id === activeTabId ? 'active' : ''}`}
           onClick={() => setActiveTab(tab.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setActiveTab(tab.id)
+            }
+          }}
         >
           <span className="tab-label">
             {tab.isDirty && <span className="tab-dirty">{'●'}</span>}
             {tab.fileName}
           </span>
           <button
+            type="button"
             className="tab-close"
             onClick={(e) => {
               e.stopPropagation()

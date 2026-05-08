@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import type { ActivityBarItem, SidebarPanel, AgentPosition, PanelSizes } from '../../domain/types/layout'
+import type {
+  ActivityBarItem,
+  AgentPosition,
+  PanelSizes,
+  SidebarPanel,
+} from '../../domain/types/layout'
 
 interface LayoutStore {
   activeActivity: ActivityBarItem | null
@@ -35,15 +40,13 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       sidebarVisible: true,
     })),
 
-  toggleSidebar: () =>
-    set((state) => ({ sidebarVisible: !state.sidebarVisible })),
+  toggleSidebar: () => set((state) => ({ sidebarVisible: !state.sidebarVisible })),
 
   setSidebarPanel: (panel) => set({ sidebarPanel: panel }),
 
   setAgentPosition: (pos) => set({ agentPosition: pos }),
 
-  toggleAgent: () =>
-    set((state) => ({ agentVisible: !state.agentVisible })),
+  toggleAgent: () => set((state) => ({ agentVisible: !state.agentVisible })),
 
   setSidebarWidth: (width) =>
     set((state) => ({

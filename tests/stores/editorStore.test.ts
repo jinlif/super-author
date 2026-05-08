@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { useEditorStore } from '../../src/application/stores/editorStore'
 
 describe('editorStore', () => {
@@ -16,8 +16,8 @@ describe('editorStore', () => {
     useEditorStore.getState().openFile('/book/chapters/01.md', '01-开篇.md')
     const state = useEditorStore.getState()
     expect(state.tabs).toHaveLength(1)
-    expect(state.tabs[0]!.fileName).toBe('01-开篇.md')
-    expect(state.activeTabId).toBe(state.tabs[0]!.id)
+    expect(state.tabs[0]?.fileName).toBe('01-开篇.md')
+    expect(state.activeTabId).toBe(state.tabs[0]?.id)
   })
 
   it('openFile 同名文件不重复打开', () => {
@@ -33,15 +33,17 @@ describe('editorStore', () => {
     store.openFile('/c.md', 'c.md')
     expect(useEditorStore.getState().tabs).toHaveLength(3)
 
-    const bTab = useEditorStore.getState().tabs[1]!
+    const bTab = useEditorStore.getState().tabs[1]
+    if (!bTab) throw new Error('expected tab to exist')
     useEditorStore.getState().closeTab(bTab.id)
     expect(useEditorStore.getState().tabs).toHaveLength(2)
   })
 
   it('markDirty 标记未保存', () => {
     useEditorStore.getState().openFile('/a.md', 'a.md')
-    const tab = useEditorStore.getState().tabs[0]!
+    const tab = useEditorStore.getState().tabs[0]
+    if (!tab) throw new Error('expected tab to exist')
     useEditorStore.getState().markDirty(tab.id, true)
-    expect(useEditorStore.getState().tabs[0]!.isDirty).toBe(true)
+    expect(useEditorStore.getState().tabs[0]?.isDirty).toBe(true)
   })
 })
