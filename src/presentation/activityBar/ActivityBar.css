@@ -1,0 +1,48 @@
+.activity-bar {
+  width: 48px;
+  height: 100%;
+  background-color: #333333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  flex-shrink: 0;
+  border-right: 1px solid #3c3c3c;
+}
+
+.activity-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s;
+}
+
+.activity-icon:hover {
+  color: #cccccc;
+}
+
+.activity-icon.active {
+  color: #ffffff;
+}
+
+.activity-icon.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background-color: #ffffff;
+}
+
+.activity-icon-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
