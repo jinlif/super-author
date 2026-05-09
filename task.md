@@ -2,28 +2,29 @@
 
 > 需求文档：
 > - [设计文档](docs/superpowers/specs/2026-05-08-super-author-design.md)
-> - [实施计划](docs/superpowers/plans/2026-05-08-super-author-plan.md)
+> - [Phase 2 设计](docs/superpowers/specs/2026-05-09-super-author-phase2-design.md)
+> - [Phase 2 实施计划](docs/superpowers/plans/2026-05-09-super-author-phase2-plan.md)
 
 ---
 
-## Phase 1 遗留
+## Phase 1 遗留 ✅
 
-- [ ] **Tauri v2 壳集成** — 创建 `src-tauri/` 目录，Rust 依赖，tauri.conf.json 配置
+- [x] **Tauri v2 壳集成** — 创建 `src-tauri/` 目录，Rust 依赖，tauri.conf.json 配置
 
-## Phase 2：数据模型 & 本地存储
+## Phase 2：数据模型 & 本地存储 ✅
 
-> 目标：能创建书、写章节，数据存本地 markdown
+> 目标：能创建书、写章节，数据存本地 markdown（已完成 ✅）
 
-- [ ] **2.1** TypeScript 类型定义完善 (Book, Chapter, Character, Annotation...)
-- [ ] **2.2** Tauri Rust 文件系统 command (read_file, write_file, read_dir, watch_dir)
-- [ ] **2.3** 前端文件服务层 (FileService 封装 Tauri invoke)
-- [ ] **2.4** BookService — 书籍创建/打开/列表管理
-- [ ] **2.5** 书籍选择页面/对话框
-- [ ] **2.6** Monaco Editor 集成 — markdown 编辑、高亮
-- [ ] **2.7** 章节内容读写 + 自动保存
-- [ ] **2.8** 侧边栏章节树 + 大纲树
-- [ ] **2.9** 状态栏 — 字数统计、写作目标进度
-- [ ] **2.10** Phase 2 集成测试
+- [x] **2.1** TypeScript 类型定义完善 (Book, Chapter)
+- [x] **2.2** Tauri Rust 文件系统 command (read_file, write_file, read_dir, create_dir, path_exists)
+- [x] **2.3** 前端文件服务层 (FileService 接口 + Mock + Tauri + 工厂)
+- [x] **2.4** BookService — BookRepository + ChapterRepository
+- [x] **2.5** 书籍选择页面/对话框
+- [x] **2.6** Monaco Editor 集成 — markdown 编辑、高亮
+- [x] **2.7** 章节内容读写 + 5s 自动保存
+- [x] **2.8** 侧边栏章节树
+- [x] **2.9** 状态栏 — 字数统计、文件名
+- [x] **2.10** Phase 2 集成测试（11 文件 45 测试）
 
 ## Phase 3：Agent 核心 + 多 Provider
 
