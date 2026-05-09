@@ -1,4 +1,5 @@
 import { useLayoutStore } from '../../application/stores/layoutStore'
+import { ChapterTree } from './ChapterTree'
 import './Sidebar.css'
 
 export function Sidebar() {
@@ -7,6 +8,17 @@ export function Sidebar() {
   const activeActivity = useLayoutStore((s) => s.activeActivity)
 
   if (!visible) return null
+
+  const renderPanel = () => {
+    if (activeActivity === 'search') {
+      return <p className="sidebar-placeholder">大纲（Phase 2 基础展示）</p>
+    }
+    if (activeActivity === 'characters') {
+      return <p className="sidebar-placeholder">角色管理（后续 Phase 实现）</p>
+    }
+    // files 或未选中 → 章节树
+    return <ChapterTree />
+  }
 
   return (
     <div className="sidebar" style={{ width }}>
@@ -19,7 +31,7 @@ export function Sidebar() {
         </span>
       </div>
       <div className="sidebar-content">
-        <p className="sidebar-placeholder">选择书籍开始写作</p>
+        {renderPanel()}
       </div>
     </div>
   )
