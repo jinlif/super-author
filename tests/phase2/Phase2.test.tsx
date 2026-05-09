@@ -38,7 +38,8 @@ describe('Phase 2 集成测试', () => {
   it('打开书籍后显示编辑器和侧边栏', async () => {
     const store = useBookStore.getState()
     await store.createBook('测试书', '作者')
-    const book = useBookStore.getState().books[0]!
+    const book = useBookStore.getState().books[0]
+    if (!book) throw new Error('Expected book')
     await store.openBook(book)
 
     render(<Layout />)
@@ -63,10 +64,12 @@ describe('Phase 2 集成测试', () => {
   it('状态栏显示字数信息', async () => {
     const store = useBookStore.getState()
     await store.createBook('书', '作者')
-    const book = useBookStore.getState().books[0]!
+    const book = useBookStore.getState().books[0]
+    if (!book) throw new Error('Expected book')
     await store.openBook(book)
     await store.createChapter('第一章')
-    const chapter = useBookStore.getState().chapters[0]!
+    const chapter = useBookStore.getState().chapters[0]
+    if (!chapter) throw new Error('Expected chapter')
     await store.loadChapter(chapter)
     await store.saveChapter('正文内容一千字')
 

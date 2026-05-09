@@ -30,9 +30,7 @@ export function Sidebar() {
           {!activeActivity && '资源管理器'}
         </span>
       </div>
-      <div className="sidebar-content">
-        {renderPanel()}
-      </div>
+      <div className="sidebar-content">{renderPanel()}</div>
     </div>
   )
 }

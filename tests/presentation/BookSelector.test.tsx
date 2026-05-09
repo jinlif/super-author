@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { BookSelector } from '../../src/presentation/bookSelector/BookSelector'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { useBookStore } from '../../src/application/stores/bookStore'
 import { MockFileService } from '../../src/infrastructure/MockFileService'
+import { BookSelector } from '../../src/presentation/bookSelector/BookSelector'
 
 describe('BookSelector', () => {
   beforeEach(() => {

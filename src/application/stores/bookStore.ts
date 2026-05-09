@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import type { IFileService } from '../../infrastructure/IFileService'
-import { MockFileService } from '../../infrastructure/MockFileService'
-import { BookRepository } from '../../infrastructure/BookRepository'
-import { ChapterRepository } from '../../infrastructure/ChapterRepository'
 import type { Book } from '../../domain/types/book'
 import type { Chapter } from '../../domain/types/chapter'
+import { BookRepository } from '../../infrastructure/BookRepository'
+import { ChapterRepository } from '../../infrastructure/ChapterRepository'
+import type { IFileService } from '../../infrastructure/IFileService'
+import { MockFileService } from '../../infrastructure/MockFileService'
 
 interface BookStore {
   books: Book[]
@@ -15,8 +15,8 @@ interface BookStore {
   isLoading: boolean
   baseDir: string
 
-  _bookRepo: BookRepository | null
-  _chapterRepo: ChapterRepository | null
+  _bookRepo: BookRepository
+  _chapterRepo: ChapterRepository
   setFileService: (fs: IFileService) => void
 
   loadBooks: () => Promise<void>
@@ -58,13 +58,13 @@ export const useBookStore = create<BookStore>((set, get) => {
     },
 
     loadBooks: async () => {
-      const repo = get()._bookRepo!
+      const repo = get()._bookRepo
       const books = await repo.listBooks(get().baseDir)
       set({ books })
     },
 
     createBook: async (title: string, author: string) => {
-      const repo = get()._bookRepo!
+      const repo = get()._bookRepo
       const book = await repo.createBook(get().baseDir, { title, author })
       set((state) => ({ books: [...state.books, book] }))
       return book
@@ -72,7 +72,7 @@ export const useBookStore = create<BookStore>((set, get) => {
 
     openBook: async (book: Book) => {
       set({ isLoading: true })
-      const repo = get()._chapterRepo!
+      const repo = get()._chapterRepo
       const chapters = await repo.listChapters(book.directory)
       set({
         currentBook: book,
@@ -95,13 +95,13 @@ export const useBookStore = create<BookStore>((set, get) => {
     createChapter: async (title: string) => {
       const book = get().currentBook
       if (!book) throw new Error('没有打开书籍')
-      const repo = get()._chapterRepo!
+      const repo = get()._chapterRepo
       const chapter = await repo.createChapter(book.directory, title)
       set((state) => ({ chapters: [...state.chapters, chapter] }))
     },
 
     loadChapter: async (chapter: Chapter) => {
-      const repo = get()._chapterRepo!
+      const repo = get()._chapterRepo
       const content = await repo.readChapter(chapter.filePath)
       set({ currentChapter: chapter, chapterContent: content })
     },
@@ -109,16 +109,14 @@ export const useBookStore = create<BookStore>((set, get) => {
     saveChapter: async (content: string) => {
       const chapter = get().currentChapter
       if (!chapter) throw new Error('没有打开的章节')
-      const repo = get()._chapterRepo!
+      const repo = get()._chapterRepo
       const wordCount = content.replace(/[\s\n]/g, '').length
       const updated = { ...chapter, wordCount, updatedAt: new Date().toISOString() }
       await repo.writeChapter(chapter.filePath, content)
       set({
         chapterContent: content,
         currentChapter: updated,
-        chapters: get().chapters.map((c) =>
-          c.id === chapter.id ? updated : c
-        ),
+        chapters: get().chapters.map((c) => (c.id === chapter.id ? updated : c)),
       })
     },
 

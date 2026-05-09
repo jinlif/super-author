@@ -34,7 +34,16 @@ export function BookSelector() {
 
       <div className="book-grid">
         {books.map((book: Book) => (
-          <div key={book.id} className="book-card" onClick={() => openBook(book)}>
+          <div
+            key={book.id}
+            className="book-card"
+            onClick={() => openBook(book)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') openBook(book)
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <div className="book-card-cover">
               <span className="book-card-emoji">📖</span>
             </div>
@@ -54,7 +63,15 @@ export function BookSelector() {
           </div>
         ))}
 
-        <div className="book-card book-card-new" onClick={() => setShowCreate(true)}>
+        <div
+          className="book-card book-card-new"
+          onClick={() => setShowCreate(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') setShowCreate(true)
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <div className="book-card-cover">
             <span className="book-card-emoji">+</span>
           </div>
@@ -74,7 +91,6 @@ export function BookSelector() {
               placeholder="书名"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              autoFocus
             />
             <input
               className="create-input"
@@ -83,10 +99,14 @@ export function BookSelector() {
               onChange={(e) => setAuthor(e.target.value)}
             />
             <div className="create-actions">
-              <button className="create-btn cancel" onClick={() => setShowCreate(false)}>
+              <button
+                type="button"
+                className="create-btn cancel"
+                onClick={() => setShowCreate(false)}
+              >
                 取消
               </button>
-              <button className="create-btn confirm" onClick={handleCreate}>
+              <button type="button" className="create-btn confirm" onClick={handleCreate}>
                 创建
               </button>
             </div>

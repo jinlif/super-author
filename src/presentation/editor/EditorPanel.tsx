@@ -1,10 +1,10 @@
 import Editor, { type OnMount } from '@monaco-editor/react'
-import { useRef, useCallback, useEffect } from 'react'
 import type { editor } from 'monaco-editor'
-import { useEditorStore } from '../../application/stores/editorStore'
+import { useCallback, useEffect, useRef } from 'react'
 import { useBookStore } from '../../application/stores/bookStore'
-import { EditorTabs } from './tabs/EditorTabs'
+import { useEditorStore } from '../../application/stores/editorStore'
 import { EditorStatusBar } from './EditorStatusBar'
+import { EditorTabs } from './tabs/EditorTabs'
 import './EditorPanel.css'
 
 export function EditorPanel() {
@@ -36,14 +36,17 @@ export function EditorPanel() {
   }, [currentChapter, saveChapter, activeTabId, markDirty])
 
   // 自动保存定时器（5秒防抖）
-  const handleChange = useCallback((value: string | undefined) => {
-    if (value !== undefined) {
-      contentRef.current = value
-      if (activeTabId) markDirty(activeTabId, true)
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      saveTimerRef.current = setTimeout(doSave, 5000)
-    }
-  }, [activeTabId, markDirty, doSave])
+  const handleChange = useCallback(
+    (value: string | undefined) => {
+      if (value !== undefined) {
+        contentRef.current = value
+        if (activeTabId) markDirty(activeTabId, true)
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = setTimeout(doSave, 5000)
+      }
+    },
+    [activeTabId, markDirty, doSave],
+  )
 
   // 组件卸载时保存
   useEffect(() => {

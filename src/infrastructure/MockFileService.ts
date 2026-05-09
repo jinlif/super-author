@@ -1,5 +1,5 @@
-import type { IFileService } from './IFileService'
 import type { FileEntry } from '../domain/types/file'
+import type { IFileService } from './IFileService'
 
 export class MockFileService implements IFileService {
   private files: Map<string, string> = new Map()

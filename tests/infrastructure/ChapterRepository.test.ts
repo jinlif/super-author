@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { MockFileService } from '../../src/infrastructure/MockFileService'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { BookRepository } from '../../src/infrastructure/BookRepository'
 import { ChapterRepository } from '../../src/infrastructure/ChapterRepository'
+import { MockFileService } from '../../src/infrastructure/MockFileService'
 
 describe('ChapterRepository', () => {
   let fs: MockFileService
@@ -32,8 +32,8 @@ describe('ChapterRepository', () => {
     await chapterRepo.createChapter(bookDir, '第二章')
     const chapters = await chapterRepo.listChapters(bookDir)
     expect(chapters).toHaveLength(2)
-    expect(chapters[0]!.order).toBe(1)
-    expect(chapters[1]!.order).toBe(2)
+    expect(chapters[0]?.order).toBe(1)
+    expect(chapters[1]?.order).toBe(2)
   })
 
   it('writeChapter 写入内容后 readChapter 返回', async () => {
@@ -48,6 +48,6 @@ describe('ChapterRepository', () => {
     expect(chapter.order).toBe(1)
     // 文件名中提取的 order
     const chapters = await chapterRepo.listChapters(bookDir)
-    expect(chapters[0]!.title).toBe('序章')
+    expect(chapters[0]?.title).toBe('序章')
   })
 })

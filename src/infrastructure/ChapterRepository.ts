@@ -1,5 +1,5 @@
-import type { IFileService } from './IFileService'
 import type { Chapter } from '../domain/types/chapter'
+import type { IFileService } from './IFileService'
 
 export class ChapterRepository {
   constructor(private fs: IFileService) {}
@@ -31,9 +31,7 @@ export class ChapterRepository {
 
   async createChapter(bookDir: string, title: string): Promise<Chapter> {
     const chapters = await this.listChapters(bookDir)
-    const nextOrder = chapters.length > 0
-      ? Math.max(...chapters.map((c) => c.order)) + 1
-      : 1
+    const nextOrder = chapters.length > 0 ? Math.max(...chapters.map((c) => c.order)) + 1 : 1
     const orderStr = String(nextOrder).padStart(2, '0')
     const fileName = `${orderStr}-${title}.md`
     const filePath = `${bookDir}/chapters/${fileName}`
@@ -59,13 +57,20 @@ export class ChapterRepository {
     await this.fs.writeFile(filePath, '')
   }
 
-  private parseChapter(bookDir: string, entry: { name: string; path: string }, content: string): Chapter {
+  private parseChapter(
+    bookDir: string,
+    entry: { name: string; path: string },
+    content: string,
+  ): Chapter {
     // 文件名格式: "01-标题.md"
     const match = entry.name.match(/^(\d+)-(.+)\.md$/)
-    const order = match ? Number.parseInt(match[1]!, 10) : 99
-    const title = match
-      ? match[2]!
-      : entry.name.replace(/\.md$/, '')
+    let order = 99
+    let title = entry.name.replace(/\.md$/, '')
+    if (match) {
+      const [, orderStr, titleStr] = match
+      if (orderStr) order = Number.parseInt(orderStr, 10)
+      if (titleStr) title = titleStr
+    }
 
     const text = content || ''
     const wordCount = text.replace(/[\s\n]/g, '').length

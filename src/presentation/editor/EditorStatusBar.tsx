@@ -7,7 +7,7 @@ export function EditorStatusBar() {
 
   const wordCount = chapterContent
     ? chapterContent.replace(/[\s\n]/g, '').length
-    : currentChapter?.wordCount ?? 0
+    : (currentChapter?.wordCount ?? 0)
 
   const status = currentChapter?.status === 'completed' ? '已完成' : '草稿'
   const fileName = currentChapter ? `${currentChapter.title}.md` : '未打开'

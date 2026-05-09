@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { IFileService } from './IFileService'
 import type { FileEntry } from '../domain/types/file'
+import type { IFileService } from './IFileService'
 
 export class TauriFileService implements IFileService {
   async readFile(path: string): Promise<string> {

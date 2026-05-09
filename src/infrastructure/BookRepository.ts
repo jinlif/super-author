@@ -1,5 +1,5 @@
-import type { IFileService } from './IFileService'
 import type { Book, BookMeta, CreateBookInput } from '../domain/types/book'
+import type { IFileService } from './IFileService'
 
 export class BookRepository {
   constructor(private fs: IFileService) {}

@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { useBookStore } from '../../src/application/stores/bookStore'
 import { useEditorStore } from '../../src/application/stores/editorStore'
 import { useLayoutStore } from '../../src/application/stores/layoutStore'
-import { useBookStore } from '../../src/application/stores/bookStore'
-import { Layout } from '../../src/presentation/layout/Layout'
 import { MockFileService } from '../../src/infrastructure/MockFileService'
+import { Layout } from '../../src/presentation/layout/Layout'
 
 describe('Layout', () => {
   beforeEach(() => {
