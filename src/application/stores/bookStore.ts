@@ -1,0 +1,127 @@
+import { create } from 'zustand'
+import type { IFileService } from '../../infrastructure/IFileService'
+import { MockFileService } from '../../infrastructure/MockFileService'
+import { BookRepository } from '../../infrastructure/BookRepository'
+import { ChapterRepository } from '../../infrastructure/ChapterRepository'
+import type { Book } from '../../domain/types/book'
+import type { Chapter } from '../../domain/types/chapter'
+
+interface BookStore {
+  books: Book[]
+  currentBook: Book | null
+  chapters: Chapter[]
+  currentChapter: Chapter | null
+  chapterContent: string
+  isLoading: boolean
+  baseDir: string
+
+  _bookRepo: BookRepository | null
+  _chapterRepo: ChapterRepository | null
+  setFileService: (fs: IFileService) => void
+
+  loadBooks: () => Promise<void>
+  createBook: (title: string, author: string) => Promise<Book>
+  openBook: (book: Book) => Promise<void>
+  closeBook: () => void
+  createChapter: (title: string) => Promise<void>
+  loadChapter: (chapter: Chapter) => Promise<void>
+  saveChapter: (content: string) => Promise<void>
+  setBaseDir: (dir: string) => void
+}
+
+function createRepos(fs?: IFileService) {
+  const fileService = fs ?? new MockFileService()
+  return {
+    bookRepo: new BookRepository(fileService),
+    chapterRepo: new ChapterRepository(fileService),
+  }
+}
+
+export const useBookStore = create<BookStore>((set, get) => {
+  const { bookRepo, chapterRepo } = createRepos()
+
+  return {
+    books: [],
+    currentBook: null,
+    chapters: [],
+    currentChapter: null,
+    chapterContent: '',
+    isLoading: false,
+    baseDir: '/books',
+
+    _bookRepo: bookRepo,
+    _chapterRepo: chapterRepo,
+
+    setFileService: (fs: IFileService) => {
+      const repos = createRepos(fs)
+      set({ _bookRepo: repos.bookRepo, _chapterRepo: repos.chapterRepo })
+    },
+
+    loadBooks: async () => {
+      const repo = get()._bookRepo!
+      const books = await repo.listBooks(get().baseDir)
+      set({ books })
+    },
+
+    createBook: async (title: string, author: string) => {
+      const repo = get()._bookRepo!
+      const book = await repo.createBook(get().baseDir, { title, author })
+      set((state) => ({ books: [...state.books, book] }))
+      return book
+    },
+
+    openBook: async (book: Book) => {
+      set({ isLoading: true })
+      const repo = get()._chapterRepo!
+      const chapters = await repo.listChapters(book.directory)
+      set({
+        currentBook: book,
+        chapters,
+        currentChapter: null,
+        chapterContent: '',
+        isLoading: false,
+      })
+    },
+
+    closeBook: () => {
+      set({
+        currentBook: null,
+        chapters: [],
+        currentChapter: null,
+        chapterContent: '',
+      })
+    },
+
+    createChapter: async (title: string) => {
+      const book = get().currentBook
+      if (!book) throw new Error('没有打开书籍')
+      const repo = get()._chapterRepo!
+      const chapter = await repo.createChapter(book.directory, title)
+      set((state) => ({ chapters: [...state.chapters, chapter] }))
+    },
+
+    loadChapter: async (chapter: Chapter) => {
+      const repo = get()._chapterRepo!
+      const content = await repo.readChapter(chapter.filePath)
+      set({ currentChapter: chapter, chapterContent: content })
+    },
+
+    saveChapter: async (content: string) => {
+      const chapter = get().currentChapter
+      if (!chapter) throw new Error('没有打开的章节')
+      const repo = get()._chapterRepo!
+      const wordCount = content.replace(/[\s\n]/g, '').length
+      const updated = { ...chapter, wordCount, updatedAt: new Date().toISOString() }
+      await repo.writeChapter(chapter.filePath, content)
+      set({
+        chapterContent: content,
+        currentChapter: updated,
+        chapters: get().chapters.map((c) =>
+          c.id === chapter.id ? updated : c
+        ),
+      })
+    },
+
+    setBaseDir: (dir: string) => set({ baseDir: dir }),
+  }
+})
