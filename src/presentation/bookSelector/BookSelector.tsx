@@ -18,7 +18,8 @@ export function BookSelector() {
 
   const handleCreate = async () => {
     if (!title.trim() || !author.trim()) return
-    await createBook(title.trim(), author.trim())
+    const book = await createBook(title.trim(), author.trim())
+    await openBook(book)
     setTitle('')
     setAuthor('')
     setShowCreate(false)
@@ -43,7 +44,9 @@ export function BookSelector() {
               {book.tags.length > 0 && (
                 <div className="book-card-tags">
                   {book.tags.map((tag) => (
-                    <span key={tag} className="book-tag">{tag}</span>
+                    <span key={tag} className="book-tag">
+                      {tag}
+                    </span>
                   ))}
                 </div>
               )}
