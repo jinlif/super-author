@@ -31,7 +31,7 @@ export function EditorPanel() {
       await saveChapter(contentRef.current)
       if (activeTabId) markDirty(activeTabId, false)
     } catch {
-      // 保存失败暂不处理
+      console.warn('自动保存失败')
     }
   }, [currentChapter, saveChapter, activeTabId, markDirty])
 

@@ -16,7 +16,7 @@ export class BookRepository {
           const book = this.parseBook(content, entry.path)
           books.push(book)
         } catch {
-          // 没有 book.json 的目录跳过
+          console.warn(`跳过没有 book.json 的目录: ${entry.path}`)
         }
       }
     }

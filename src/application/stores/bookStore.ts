@@ -3,8 +3,8 @@ import type { Book } from '../../domain/types/book'
 import type { Chapter } from '../../domain/types/chapter'
 import { BookRepository } from '../../infrastructure/BookRepository'
 import { ChapterRepository } from '../../infrastructure/ChapterRepository'
+import { createFileService } from '../../infrastructure/createFileService'
 import type { IFileService } from '../../infrastructure/IFileService'
-import { MockFileService } from '../../infrastructure/MockFileService'
 
 interface BookStore {
   books: Book[]
@@ -30,7 +30,7 @@ interface BookStore {
 }
 
 function createRepos(fs?: IFileService) {
-  const fileService = fs ?? new MockFileService()
+  const fileService = fs ?? createFileService()
   return {
     bookRepo: new BookRepository(fileService),
     chapterRepo: new ChapterRepository(fileService),

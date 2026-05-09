@@ -53,10 +53,6 @@ export class ChapterRepository {
     }
   }
 
-  async deleteChapter(filePath: string): Promise<void> {
-    await this.fs.writeFile(filePath, '')
-  }
-
   private parseChapter(
     bookDir: string,
     entry: { name: string; path: string },
