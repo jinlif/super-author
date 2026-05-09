@@ -2,7 +2,9 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useEditorStore } from '../../src/application/stores/editorStore'
 import { useLayoutStore } from '../../src/application/stores/layoutStore'
+import { useBookStore } from '../../src/application/stores/bookStore'
 import { Layout } from '../../src/presentation/layout/Layout'
+import { MockFileService } from '../../src/infrastructure/MockFileService'
 
 describe('Layout', () => {
   beforeEach(() => {
@@ -15,6 +17,26 @@ describe('Layout', () => {
       panelSizes: { sidebar: 280, agent: 360 },
     })
     useEditorStore.setState({ tabs: [], activeTabId: null })
+    useBookStore.setState({
+      books: [],
+      currentBook: {
+        id: 'test-book',
+        title: '测试书籍',
+        author: '测试作者',
+        description: '',
+        tags: [],
+        style: '',
+        directory: '/books/test-book',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+      chapters: [],
+      currentChapter: null,
+      chapterContent: '',
+      isLoading: false,
+      baseDir: '/books',
+    })
+    useBookStore.getState().setFileService(new MockFileService())
   })
 
   it('渲染四个面板区域', () => {
