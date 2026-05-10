@@ -17,7 +17,7 @@ describe('Phase 2 集成测试', () => {
       agentVisible: true,
       panelSizes: { sidebar: 280, agent: 360 },
     })
-    useEditorStore.setState({ tabs: [], activeTabId: null })
+    useEditorStore.setState({ tabs: [], activeTabId: null, pendingCloseTabId: null, pendingCloseTabFileName: '' })
     useBookStore.setState({
       books: [],
       currentBook: null,

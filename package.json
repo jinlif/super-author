@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
+    "tauri": "tauri dev",
     "lint": "biome check src/ tests/",
     "lint:fix": "biome check --fix src/ tests/",
     "format": "biome format --write src/ tests/",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "autoprefixer": "^10.5.0",

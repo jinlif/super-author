@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 dist/
+tsconfig.tsbuildinfo
 
 # IDE
 .vscode/
@@ -19,3 +20,5 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+src-tauri/target

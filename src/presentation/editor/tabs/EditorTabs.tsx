@@ -1,13 +1,23 @@
-import { useEditorStore } from '../../../application/stores/editorStore'
 import { useModelService } from '../../../application/services/ModelService'
+import { useEditorStore } from '../../../application/stores/editorStore'
 import './EditorTabs.css'
+
+function TabDirtyDot({ filePath }: { filePath: string }) {
+  const isDirty = useModelService(
+    (s) => {
+      const model = s.models[filePath]
+      return model ? model.versionId !== model.savedVersionId : false
+    },
+  )
+  if (!isDirty) return null
+  return <span className="tab-dirty">{'●'}</span>
+}
 
 export function EditorTabs() {
   const tabs = useEditorStore((s) => s.tabs)
   const activeTabId = useEditorStore((s) => s.activeTabId)
   const setActiveTab = useEditorStore((s) => s.setActiveTab)
   const requestCloseTab = useEditorStore((s) => s.requestCloseTab)
-  const isDirty = useModelService((s) => s.isDirty)
 
   if (tabs.length === 0) return null
 
@@ -29,7 +39,7 @@ export function EditorTabs() {
           }}
         >
           <span className="tab-label">
-            {isDirty(tab.filePath) && <span className="tab-dirty">{'●'}</span>}
+            <TabDirtyDot filePath={tab.filePath} />
             {tab.fileName}
           </span>
           <button
