@@ -23,7 +23,7 @@ export const useModelService = create<ModelServiceState>((set, get) => ({
   pendingCloseUri: null,
   pendingCloseFileName: '',
 
-  getOrCreate: (uri, fileName, initialContent) => {
+  getOrCreate: (uri, _fileName, initialContent) => {
     const state = get()
     const existing = state.models[uri]
     if (existing) {

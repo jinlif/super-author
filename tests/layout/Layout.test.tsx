@@ -16,7 +16,7 @@ describe('Layout', () => {
       agentVisible: true,
       panelSizes: { sidebar: 280, agent: 360 },
     })
-    useEditorStore.setState({ tabs: [], activeTabId: null })
+    useEditorStore.setState({ tabs: [], activeTabId: null, pendingCloseTabId: null, pendingCloseTabFileName: '' })
     useBookStore.setState({
       books: [],
       currentBook: {
@@ -62,8 +62,8 @@ describe('Layout', () => {
   })
 
   it('打开文件后显示标签', () => {
-    useEditorStore.getState().openFile('/book/chapters/01.md', '01-开篇.md')
+    useEditorStore.getState().openFile('/book/chapters/01.md', '01-开篇.md', '# 测试内容')
     render(<Layout />)
-    expect(screen.getByText('01-开篇.md')).toBeInTheDocument()
+    expect(screen.getAllByText('01-开篇.md').length).toBeGreaterThanOrEqual(1)
   })
 })

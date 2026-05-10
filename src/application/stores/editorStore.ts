@@ -31,7 +31,7 @@ function closeTabLogic(tabs: EditorTab[], tabId: string, activeTabId: string | n
   return { tabs: newTabs, activeTabId: newActiveId }
 }
 
-export const useEditorStore = create<EditorStore>((set, get) => ({
+export const useEditorStore = create<EditorStore>((set) => ({
   tabs: [],
   activeTabId: null,
 
