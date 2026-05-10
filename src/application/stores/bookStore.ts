@@ -11,7 +11,6 @@ interface BookStore {
   currentBook: Book | null
   chapters: Chapter[]
   currentChapter: Chapter | null
-  chapterContent: string
   isLoading: boolean
   baseDir: string
 
@@ -24,8 +23,8 @@ interface BookStore {
   openBook: (book: Book) => Promise<void>
   closeBook: () => void
   createChapter: (title: string) => Promise<void>
-  loadChapter: (chapter: Chapter) => Promise<void>
-  saveChapter: (content: string) => Promise<void>
+  loadChapter: (chapter: Chapter) => Promise<string>
+  saveChapter: (content: string, chapter?: Chapter) => Promise<void>
   setBaseDir: (dir: string) => void
 }
 
@@ -45,7 +44,6 @@ export const useBookStore = create<BookStore>((set, get) => {
     currentBook: null,
     chapters: [],
     currentChapter: null,
-    chapterContent: '',
     isLoading: false,
     baseDir: '/books',
 
@@ -78,7 +76,6 @@ export const useBookStore = create<BookStore>((set, get) => {
         currentBook: book,
         chapters,
         currentChapter: null,
-        chapterContent: '',
         isLoading: false,
       })
     },
@@ -88,7 +85,6 @@ export const useBookStore = create<BookStore>((set, get) => {
         currentBook: null,
         chapters: [],
         currentChapter: null,
-        chapterContent: '',
       })
     },
 
@@ -103,20 +99,20 @@ export const useBookStore = create<BookStore>((set, get) => {
     loadChapter: async (chapter: Chapter) => {
       const repo = get()._chapterRepo
       const content = await repo.readChapter(chapter.filePath)
-      set({ currentChapter: chapter, chapterContent: content })
+      set({ currentChapter: chapter })
+      return content
     },
 
-    saveChapter: async (content: string) => {
-      const chapter = get().currentChapter
-      if (!chapter) throw new Error('没有打开的章节')
+    saveChapter: async (content: string, chapter?: Chapter) => {
+      const ch = chapter ?? get().currentChapter
+      if (!ch) throw new Error('没有打开的章节')
       const repo = get()._chapterRepo
       const wordCount = content.replace(/[\s\n]/g, '').length
-      const updated = { ...chapter, wordCount, updatedAt: new Date().toISOString() }
-      await repo.writeChapter(chapter.filePath, content)
+      const updated = { ...ch, wordCount, updatedAt: new Date().toISOString() }
+      await repo.writeChapter(ch.filePath, content)
       set({
-        chapterContent: content,
         currentChapter: updated,
-        chapters: get().chapters.map((c) => (c.id === chapter.id ? updated : c)),
+        chapters: get().chapters.map((c) => (c.id === ch.id ? updated : c)),
       })
     },
 

@@ -12,7 +12,6 @@ describe('bookStore', () => {
       currentBook: null,
       chapters: [],
       currentChapter: null,
-      chapterContent: '',
       isLoading: false,
       baseDir: '/books',
     })
@@ -58,7 +57,7 @@ describe('bookStore', () => {
     expect(chapters[0]?.title).toBe('第一章')
   })
 
-  it('loadChapter 读取并设置 chapterContent', async () => {
+  it('loadChapter 读取并设置 currentChapter', async () => {
     await useBookStore.getState().createBook('书', '作者')
     const state = useBookStore.getState()
     const book = state.books[0]
@@ -67,9 +66,9 @@ describe('bookStore', () => {
     await useBookStore.getState().createChapter('测试')
     const chapter = useBookStore.getState().chapters[0]
     if (!chapter) return
-    await useBookStore.getState().loadChapter(chapter)
+    const content = await useBookStore.getState().loadChapter(chapter)
     expect(useBookStore.getState().currentChapter?.id).toBe(chapter.id)
-    expect(useBookStore.getState().chapterContent).toBe('# 测试\n\n')
+    expect(content).toBe('# 测试\n\n')
   })
 
   it('saveChapter 保存内容并更新字数', async () => {
@@ -83,7 +82,6 @@ describe('bookStore', () => {
     if (!chapter) return
     await useBookStore.getState().loadChapter(chapter)
     await useBookStore.getState().saveChapter('新内容正文')
-    expect(useBookStore.getState().chapterContent).toBe('新内容正文')
     expect(useBookStore.getState().currentChapter?.wordCount).toBe(5)
   })
 
@@ -96,6 +94,5 @@ describe('bookStore', () => {
     useBookStore.getState().closeBook()
     expect(useBookStore.getState().currentBook).toBeNull()
     expect(useBookStore.getState().chapters).toHaveLength(0)
-    expect(useBookStore.getState().chapterContent).toBe('')
   })
 })
