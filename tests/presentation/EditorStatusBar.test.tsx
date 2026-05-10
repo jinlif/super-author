@@ -1,6 +1,9 @@
+// tests/presentation/EditorStatusBar.test.tsx
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useBookStore } from '../../src/application/stores/bookStore'
+import { useEditorStore } from '../../src/application/stores/editorStore'
+import { useModelService } from '../../src/application/services/ModelService'
 import { MockFileService } from '../../src/infrastructure/MockFileService'
 import { EditorStatusBar } from '../../src/presentation/editor/EditorStatusBar'
 
@@ -12,20 +15,26 @@ describe('EditorStatusBar', () => {
       currentBook: null,
       chapters: [],
       currentChapter: null,
-      chapterContent: '',
       isLoading: false,
       baseDir: '/books',
     })
     useBookStore.getState().setFileService(fs)
+    useEditorStore.setState({ tabs: [], activeTabId: null })
+    useModelService.setState({
+      models: {},
+      refCount: {},
+      pendingCloseUri: null,
+      pendingCloseFileName: '',
+    })
   })
 
-  it('无章节时显示默认状态', () => {
-    render(<EditorStatusBar />)
+  it('无标签时显示默认状态', () => {
+    render(<EditorStatusBar liveWordCount={0} />)
     expect(screen.getByText('未打开')).toBeInTheDocument()
     expect(screen.getByText('字数: 0')).toBeInTheDocument()
   })
 
-  it('有章节时显示文件名和字数', async () => {
+  it('有激活标签时显示文件名和字数', async () => {
     const store = useBookStore.getState()
     await store.createBook('书', '作者')
     const book = useBookStore.getState().books[0]
@@ -34,10 +43,12 @@ describe('EditorStatusBar', () => {
     await store.createChapter('第一章')
     const chapter = useBookStore.getState().chapters[0]
     if (!chapter) throw new Error('Expected chapter')
-    await store.loadChapter(chapter)
 
-    render(<EditorStatusBar />)
-    expect(screen.getByText(/第一章\.md/)).toBeInTheDocument()
+    const content = await store.loadChapter(chapter)
+    useEditorStore.getState().openFile(chapter.filePath, '第一章.md', content)
+
+    render(<EditorStatusBar liveWordCount={0} />)
+    expect(screen.getByText('第一章.md')).toBeInTheDocument()
     expect(screen.getByText(/字数:/)).toBeInTheDocument()
   })
 })

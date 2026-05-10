@@ -1,16 +1,33 @@
+// src/presentation/editor/EditorStatusBar.tsx
 import { useBookStore } from '../../application/stores/bookStore'
+import { useEditorStore } from '../../application/stores/editorStore'
+import { useModelService } from '../../application/services/ModelService'
 import './EditorStatusBar.css'
 
-export function EditorStatusBar() {
-  const currentChapter = useBookStore((s) => s.currentChapter)
-  const chapterContent = useBookStore((s) => s.chapterContent)
+interface EditorStatusBarProps {
+  liveWordCount: number
+}
 
-  const wordCount = chapterContent
-    ? chapterContent.replace(/[\s\n]/g, '').length
-    : (currentChapter?.wordCount ?? 0)
+export function EditorStatusBar({ liveWordCount }: EditorStatusBarProps) {
+  const tabs = useEditorStore((s) => s.tabs)
+  const activeTabId = useEditorStore((s) => s.activeTabId)
+  const chapters = useBookStore((s) => s.chapters)
+  const models = useModelService((s) => s.models)
 
-  const status = currentChapter?.status === 'completed' ? '已完成' : '草稿'
-  const fileName = currentChapter ? `${currentChapter.title}.md` : '未打开'
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null
+  const activeModel = activeTab ? models[activeTab.filePath] : null
+  const chapter = activeTab
+    ? chapters.find((c) => c.filePath === activeTab.filePath) ?? null
+    : null
+
+  const wordCount = liveWordCount > 0
+    ? liveWordCount
+    : (activeModel
+      ? activeModel.value.replace(/[\s\n]/g, '').length
+      : (chapter?.wordCount ?? 0))
+
+  const status = chapter?.status === 'completed' ? '已完成' : '草稿'
+  const fileName = activeTab ? activeTab.fileName : (chapter ? `${chapter.title}.md` : '未打开')
 
   return (
     <div className="editor-statusbar">
