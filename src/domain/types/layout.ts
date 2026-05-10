@@ -18,7 +18,6 @@ export interface EditorTab {
   id: string
   filePath: string
   fileName: string
-  isDirty: boolean
 }
 
 // 布局状态
