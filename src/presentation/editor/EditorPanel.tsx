@@ -28,6 +28,7 @@ export function EditorPanel() {
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null
   const activeUri = activeTab?.filePath ?? null
+  const hasTabs = tabs.length > 0 && activeTab !== null
 
   // 保存：通过 filePath 查找 Chapter，不依赖 currentChapter
   const doSave = useCallback(
@@ -154,37 +155,49 @@ export function EditorPanel() {
     if (tab) useEditorStore.getState().forceCloseTab(tab.id)
   }, [pendingCloseUri])
 
+  // Editor 显隐时触发 Monaco 重新布局
+  useEffect(() => {
+    const editor = editorRef.current
+    if (editor && hasTabs) {
+      // 延迟确保 CSS display 已生效
+      requestAnimationFrame(() => editor.layout())
+    }
+  }, [hasTabs])
+
   return (
     <div className="editor-panel">
       <EditorTabs />
       <div className="editor-content">
-        {tabs.length === 0 || !activeTab ? (
-          <div className="editor-welcome">
-            <div className="welcome-content">
-              <h1>超级作者</h1>
-              <p>选择章节开始编辑</p>
-            </div>
+        <div
+          className="editor-welcome"
+          style={{ display: hasTabs ? 'none' : 'flex' }}
+        >
+          <div className="welcome-content">
+            <h1>超级作者</h1>
+            <p>选择章节开始编辑</p>
           </div>
-        ) : (
-          <div className="editor-area">
-            <Editor
-              height="100%"
-              defaultLanguage="markdown"
-              theme="vs-dark"
-              onChange={handleChange}
-              onMount={handleEditorDidMount}
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                lineNumbers: 'on',
-                wordWrap: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-              }}
-            />
-          </div>
-        )}
+        </div>
+        <div
+          className="editor-area"
+          style={{ display: hasTabs ? 'flex' : 'none' }}
+        >
+          <Editor
+            height="100%"
+            defaultLanguage="markdown"
+            theme="vs-dark"
+            onChange={handleChange}
+            onMount={handleEditorDidMount}
+            options={{
+              minimap: { enabled: true },
+              fontSize: 14,
+              lineNumbers: 'on',
+              wordWrap: 'on',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+            }}
+          />
+        </div>
       </div>
       <EditorStatusBar liveWordCount={liveWordCount} />
       <ConfirmSaveDialog
