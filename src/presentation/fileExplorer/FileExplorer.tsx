@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileEntry } from '../../domain/types/file'
 import { useBookStore } from '../../application/stores/bookStore'
 import { useEditorStore } from '../../application/stores/editorStore'
+import { useModelService } from '../../application/services/ModelService'
 import { FileTreeNode } from './FileTreeNode'
 import { ContextMenu, type ContextMenuAction, type ContextMenuState } from './ContextMenu'
 import { InputDialog } from './InputDialog'
@@ -273,7 +274,26 @@ export function FileExplorer() {
           const name = node.isDir ? `目录 "${node.name}"` : `文件 "${node.name}"`
           const ok = await showConfirmDialog('确认删除', `确定删除${name}吗？此操作不可撤销。`)
           if (!ok) return
+
+          // 检查是否有未保存修改
+          const ms = useModelService.getState()
+          if (!node.isDir && ms.isDirty(node.path)) {
+            await showAlertDialog('提示', '文件有未保存的修改，请先保存后再删除')
+            return
+          }
+
+          // 执行删除
           await fs.remove(node.path)
+
+          // 关闭标签页
+          if (!node.isDir) {
+            const tab = useEditorStore.getState().tabs.find(t => t.filePath === node.path)
+            if (tab) {
+              useEditorStore.getState().forceCloseTab(tab.id)
+            }
+          }
+
+          // 清理缓存并刷新
           const parentPath = node.path.substring(0, node.path.lastIndexOf('/'))
           await refreshDir(parentPath)
           break
