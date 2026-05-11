@@ -21,8 +21,7 @@ function getParentDirName(filePath: string): string {
   return parts.length > 1 ? parts[parts.length - 2] : ''
 }
 
-// @ts-ignore - 将在后续任务中使用
-function collectFilePaths(dirPath: string, entries: FileEntry[], dirCache: DirCache): string[] {
+function collectFilePaths(_dirPath: string, entries: FileEntry[], dirCache: DirCache): string[] {
   const paths: string[] = []
   for (const entry of entries) {
     if (entry.isDir) {
@@ -37,7 +36,6 @@ function collectFilePaths(dirPath: string, entries: FileEntry[], dirCache: DirCa
   return paths
 }
 
-// @ts-ignore - 将在后续任务中使用
 async function hasMdFilesRecursive(
   _dirPath: string,
   entries: FileEntry[],
@@ -339,6 +337,24 @@ export function FileExplorer() {
         }
         case 'delete_volume': {
           const entries = dirCache[node.path] ?? (await loadDir(node.path))
+
+          // 检查是否有章节
+          const hasChapters = await hasMdFilesRecursive(node.path, entries, loadDir, dirCache)
+          if (hasChapters) {
+            await showAlertDialog('提示', '卷内存在章节，请先删除章节后再删除卷')
+            return
+          }
+
+          // 检查未保存修改
+          const filePaths = collectFilePaths(node.path, entries, dirCache)
+          const ms = useModelService.getState()
+          const dirtyFiles = filePaths.filter(p => ms.isDirty(p))
+          if (dirtyFiles.length > 0) {
+            await showAlertDialog('提示', '卷内有未保存的文件，请先保存后再删除')
+            return
+          }
+
+          // 确认删除
           const chapterNames = entries
             .filter((e) => !e.isDir && e.name.endsWith('.md'))
             .map((e) => `  - ${e.name}`)
@@ -346,7 +362,19 @@ export function FileExplorer() {
           const msg = `确定删除卷 "${node.name}" 吗？\n卷内包含以下文件：\n${chapterNames || '  (空卷)'}\n\n此操作不可撤销。`
           const ok = await showConfirmDialog('删除卷', msg)
           if (!ok) return
+
+          // 执行删除
           await fs.remove(node.path)
+
+          // 关闭相关标签页
+          const editorStore = useEditorStore.getState()
+          const tabsToClose = editorStore.tabs.filter(t =>
+            t.filePath.startsWith(node.path + '/') || t.filePath.startsWith(node.path + '\\')
+          )
+          tabsToClose.forEach(tab => editorStore.forceCloseTab(tab.id))
+
+          // 清理缓存并刷新
+          cleanupDeletedDir(node.path)
           const parentPath = node.path.substring(0, node.path.lastIndexOf('/'))
           await refreshDir(parentPath)
           break
