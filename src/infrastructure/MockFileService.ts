@@ -65,4 +65,28 @@ export class MockFileService implements IFileService {
   async exists(path: string): Promise<boolean> {
     return this.files.has(path) || this.dirs.has(path)
   }
+
+  async remove(path: string): Promise<void> {
+    const hadFile = this.files.delete(path)
+    const hadDir = this.dirs.delete(path)
+    // 删除目录下的所有文件
+    for (const key of this.files.keys()) {
+      if (key.startsWith(`${path}/`)) {
+        this.files.delete(key)
+      }
+    }
+    // 删除目录下的所有子目录
+    for (const key of this.dirs.keys()) {
+      if (key.startsWith(`${path}/`)) {
+        this.dirs.delete(key)
+      }
+    }
+    if (!hadFile && !hadDir) {
+      throw new Error(`ENOENT: ${path}`)
+    }
+  }
+
+  async getHomeDir(): Promise<string> {
+    return '/home/user'
+  }
 }

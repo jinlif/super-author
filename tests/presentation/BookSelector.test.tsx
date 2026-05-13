@@ -12,11 +12,9 @@ describe('BookSelector', () => {
       currentBook: null,
       chapters: [],
       currentChapter: null,
-      chapterContent: '',
       isLoading: false,
-      baseDir: '/books',
     })
-    useBookStore.getState().setFileService(new MockFileService())
+    useBookStore.getState().setFileService(new MockFileService(), '/home/user')
   })
 
   it('渲染标题和新建按钮', () => {

@@ -84,9 +84,7 @@ export const useModelService = create<ModelServiceState>((set, get) => ({
     return model.versionId !== model.savedVersionId
   },
 
-  setPendingClose: (uri, fileName) =>
-    set({ pendingCloseUri: uri, pendingCloseFileName: fileName }),
+  setPendingClose: (uri, fileName) => set({ pendingCloseUri: uri, pendingCloseFileName: fileName }),
 
-  clearPendingClose: () =>
-    set({ pendingCloseUri: null, pendingCloseFileName: '' }),
+  clearPendingClose: () => set({ pendingCloseUri: null, pendingCloseFileName: '' }),
 }))

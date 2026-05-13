@@ -16,7 +16,12 @@ export function ConfirmSaveDialog({
   onCancel,
 }: ConfirmSaveDialogProps) {
   return (
-    <Dialog.Root open={open} onOpenChange={(open) => { if (!open) onCancel() }}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) onCancel()
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-in" />
         <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-[#1e1e1e] border border-[#3c3c3c] p-6 shadow-xl w-96 data-[state=open]:animate-in">

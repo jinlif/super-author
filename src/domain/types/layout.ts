@@ -1,8 +1,8 @@
 // 活动栏项目标识
-export type ActivityBarItem = 'files' | 'search' | 'characters' | 'settings'
+export type ActivityBarItem = 'files' | 'settings' // 'search' | 'characters' (Phase 3+)
 
 // 侧边栏面板类型
-export type SidebarPanel = 'explorer' | 'search' | 'characters' | null
+export type SidebarPanel = 'explorer' | null // 'search' | 'characters' (Phase 3+)
 
 // Agent 面板位置
 export type AgentPosition = 'right' | 'bottom' | 'floating'
@@ -18,6 +18,7 @@ export interface EditorTab {
   id: string
   filePath: string
   fileName: string
+  type?: 'file' | 'settings'
 }
 
 // 布局状态

@@ -1,0 +1,96 @@
+.file-explorer {
+  padding: 4px 0;
+  font-size: 13px;
+  user-select: none;
+}
+
+.file-explorer-loading,
+.file-explorer-empty {
+  padding: 8px 16px;
+  color: #858585;
+  font-size: 13px;
+}
+
+/* 树节点 */
+.file-tree-node {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  height: 22px;
+  line-height: 22px;
+  margin: 0;
+}
+
+.file-tree-node:hover {
+  background-color: #2a2d2e;
+}
+
+.file-tree-node.active {
+  background-color: #37373d;
+}
+
+.file-tree-node-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.file-tree-node-chevron {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-size: 10px;
+  color: #858585;
+  transition: transform 0.1s;
+}
+
+.file-tree-node-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.file-tree-node-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 系统目录颜色 */
+.file-tree-node.is-system-dir {
+  font-weight: 500;
+}
+
+/* 上下文菜单 */
+.file-context-menu {
+  position: fixed;
+  z-index: 1000;
+  background-color: #252526;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  min-width: 160px;
+  padding: 4px 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.file-context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 16px;
+  font-size: 13px;
+  color: #cccccc;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.file-context-menu-item:hover {
+  background-color: #094771;
+  color: #ffffff;
+}
+
+.file-context-menu-divider {
+  height: 1px;
+  background-color: #3c3c3c;
+  margin: 4px 8px;
+}

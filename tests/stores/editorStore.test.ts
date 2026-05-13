@@ -1,7 +1,7 @@
 // tests/stores/editorStore.test.ts
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useEditorStore } from '../../src/application/stores/editorStore'
 import { useModelService } from '../../src/application/services/ModelService'
+import { useEditorStore } from '../../src/application/stores/editorStore'
 
 describe('editorStore', () => {
   beforeEach(() => {
@@ -78,7 +78,8 @@ describe('editorStore', () => {
   it('cancelCloseTab 清空 pending 状态', () => {
     useEditorStore.getState().openFile('/a.md', 'a.md', '')
     useModelService.getState().updateValue('/a.md', '脏')
-    const tab = useEditorStore.getState().tabs[0]!
+    const tab = useEditorStore.getState().tabs[0]
+    if (!tab) throw new Error('tab not found')
     useEditorStore.getState().requestCloseTab(tab.id)
     useEditorStore.getState().cancelCloseTab()
     expect(useModelService.getState().pendingCloseUri).toBeNull()
@@ -88,10 +89,12 @@ describe('editorStore', () => {
     useEditorStore.getState().openFile('/a.md', 'a.md', '')
     useEditorStore.getState().openFile('/b.md', 'b.md', '')
     useModelService.getState().updateValue('/a.md', '脏')
-    const aTab = useEditorStore.getState().tabs[0]!
+    const aTab = useEditorStore.getState().tabs[0]
+    if (!aTab) throw new Error('aTab not found')
     useEditorStore.getState().requestCloseTab(aTab.id)
     expect(useModelService.getState().pendingCloseUri).toBe('/a.md')
-    const bTab = useEditorStore.getState().tabs[1]!
+    const bTab = useEditorStore.getState().tabs[1]
+    if (!bTab) throw new Error('bTab not found')
     useEditorStore.getState().setActiveTab(bTab.id)
     expect(useModelService.getState().pendingCloseUri).toBeNull()
   })

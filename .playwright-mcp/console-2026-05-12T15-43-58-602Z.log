@@ -1,0 +1,14 @@
+[     306ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/userProfile:0
+[     319ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[     320ms] [ERROR] 刷新用户信息失败: Error: 网络请求失败
+    at P (https://platform.xiaomimimo.com/static/main.148eb4f4.chunk.js:152:36540)
+    at async v (https://platform.xiaomimimo.com/static/main.148eb4f4.chunk.js:152:37412)
+    at async a.refreshUserInfo (https://platform.xiaomimimo.com/static/main.148eb4f4.chunk.js:110:11189) @ https://platform.xiaomimimo.com/static/main.148eb4f4.chunk.js:109
+[     367ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[   10362ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[   10423ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[   20404ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[   20456ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[   65497ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[   75500ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0
+[  175670ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://platform.xiaomimimo.com/api/v1/invitation/eligible:0

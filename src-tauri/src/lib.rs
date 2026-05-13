@@ -45,6 +45,23 @@ fn path_exists(path: String) -> Result<bool, String> {
     Ok(std::path::Path::new(&path).exists())
 }
 
+#[tauri::command]
+fn remove_file(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if p.is_dir() {
+        std::fs::remove_dir_all(&path).map_err(|e| e.to_string())
+    } else {
+        std::fs::remove_file(&path).map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+fn get_home_dir() -> Result<String, String> {
+    dirs::home_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .ok_or_else(|| "无法获取用户主目录".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -54,7 +71,9 @@ pub fn run() {
             write_file,
             read_dir,
             create_dir,
-            path_exists
+            path_exists,
+            remove_file,
+            get_home_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

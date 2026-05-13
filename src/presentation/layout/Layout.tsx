@@ -11,7 +11,7 @@ export function Layout() {
 
   return (
     <div className="layout">
-      <ActivityBar />
+      {currentBook && <ActivityBar />}
       {currentBook && <Sidebar />}
       {currentBook ? <EditorPanel /> : <BookSelector />}
       {currentBook && <AgentPanel />}

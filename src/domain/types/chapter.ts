@@ -6,6 +6,7 @@ export interface Chapter {
   status: 'draft' | 'completed'
   wordCount: number
   filePath: string
+  volume?: string
   createdAt: string
   updatedAt: string
 }

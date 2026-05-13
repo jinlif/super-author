@@ -1,22 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { FileEntry } from '../../domain/types/file'
+import { useModelService } from '../../application/services/ModelService'
 import { useBookStore } from '../../application/stores/bookStore'
 import { useEditorStore } from '../../application/stores/editorStore'
-import { useModelService } from '../../application/services/ModelService'
-import { FileTreeNode } from './FileTreeNode'
-import { ContextMenu, type ContextMenuAction, type ContextMenuState } from './ContextMenu'
-import { InputDialog } from './InputDialog'
-import { ConfirmDialog } from './ConfirmDialog'
+import type { FileEntry } from '../../domain/types/file'
 import { AlertDialog } from './AlertDialog'
+import { ConfirmDialog } from './ConfirmDialog'
+import { ContextMenu, type ContextMenuAction, type ContextMenuState } from './ContextMenu'
+import { FileTreeNode } from './FileTreeNode'
+import { InputDialog } from './InputDialog'
 import './FileExplorer.css'
 
 interface DirCache {
   [dirPath: string]: FileEntry[]
 }
 
+/** 将路径统一为正斜杠，兼容 Windows 反斜杠 */
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/')
+}
+
 function getParentDirName(filePath: string): string {
-  // 统一为正斜杠处理，兼容 Windows 反斜杠路径
-  const normalized = filePath.replace(/\\/g, '/').replace(/\/$/, '')
+  const normalized = normalizePath(filePath).replace(/\/$/, '')
   const parts = normalized.split('/')
   return parts.length > 1 ? parts[parts.length - 2] : ''
 }
@@ -98,7 +102,11 @@ export function FileExplorer() {
   )
 
   const showConfirmDialog = useCallback(
-    (title: string, message: string, options?: { confirmText?: string; cancelText?: string }): Promise<boolean> => {
+    (
+      title: string,
+      message: string,
+      options?: { confirmText?: string; cancelText?: string },
+    ): Promise<boolean> => {
       return new Promise((resolve) => {
         setConfirmTitle(title)
         setConfirmMessage(message)
@@ -111,27 +119,30 @@ export function FileExplorer() {
     [],
   )
 
-  const showAlertDialog = useCallback(
-    (title: string, message: string): Promise<void> => {
-      return new Promise((resolve) => {
-        setAlertTitle(title)
-        setAlertMessage(message)
-        setAlertDialogOpen(true)
-        alertResolveRef.current = resolve
-      })
-    },
-    [],
-  )
+  const showAlertDialog = useCallback((title: string, message: string): Promise<void> => {
+    return new Promise((resolve) => {
+      setAlertTitle(title)
+      setAlertMessage(message)
+      setAlertDialogOpen(true)
+      alertResolveRef.current = resolve
+    })
+  }, [])
 
-  const rootPath = currentBook?.directory ?? null
+  const rootPath = currentBook?.directory ? normalizePath(currentBook.directory) : null
 
   const loadDir = useCallback(
     async (dirPath: string) => {
       const fs = getFs()
       try {
         const entries = await fs.readDir(dirPath)
-        setDirCache((prev) => ({ ...prev, [dirPath]: entries }))
-        return entries
+        // 规范化路径，确保 Windows 反斜杠统一为正斜杠
+        const normalizedEntries = entries.map((e) => ({
+          ...e,
+          path: normalizePath(e.path),
+        }))
+        const normalizedDir = normalizePath(dirPath)
+        setDirCache((prev) => ({ ...prev, [normalizedDir]: normalizedEntries }))
+        return normalizedEntries
       } catch {
         return [] as FileEntry[]
       }
@@ -183,17 +194,19 @@ export function FileExplorer() {
         console.warn('读取文件失败:', entry.path)
       }
     },
-    [handleToggle, openFile],
+    [handleToggle, openFile, getFs],
   )
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, entry: FileEntry) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setContextMenu({ x: e.clientX, y: e.clientY, node: entry, parentName: getParentDirName(entry.path) })
-    },
-    [],
-  )
+  const handleContextMenu = useCallback((e: React.MouseEvent, entry: FileEntry) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      node: entry,
+      parentName: getParentDirName(entry.path),
+    })
+  }, [])
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null)
@@ -206,32 +219,29 @@ export function FileExplorer() {
     [loadDir],
   )
 
-  const cleanupDeletedDir = useCallback(
-    (dirPath: string) => {
-      // 从 expandedDirs 中移除
-      setExpandedDirs((prev) => {
-        const next = new Set(prev)
-        for (const path of next) {
-          if (path === dirPath || path.startsWith(dirPath + '/') || path.startsWith(dirPath + '\\')) {
-            next.delete(path)
-          }
+  const cleanupDeletedDir = useCallback((dirPath: string) => {
+    // 从 expandedDirs 中移除
+    setExpandedDirs((prev) => {
+      const next = new Set(prev)
+      for (const path of next) {
+        if (path === dirPath || path.startsWith(`${dirPath}/`) || path.startsWith(`${dirPath}\\`)) {
+          next.delete(path)
         }
-        return next
-      })
+      }
+      return next
+    })
 
-      // 从 dirCache 中移除
-      setDirCache((prev) => {
-        const next = { ...prev }
-        for (const path of Object.keys(next)) {
-          if (path === dirPath || path.startsWith(dirPath + '/') || path.startsWith(dirPath + '\\')) {
-            delete next[path]
-          }
+    // 从 dirCache 中移除
+    setDirCache((prev) => {
+      const next = { ...prev }
+      for (const path of Object.keys(next)) {
+        if (path === dirPath || path.startsWith(`${dirPath}/`) || path.startsWith(`${dirPath}\\`)) {
+          delete next[path]
         }
-        return next
-      })
-    },
-    [],
-  )
+      }
+      return next
+    })
+  }, [])
 
   const handleAction = useCallback(
     async (action: ContextMenuAction, node: FileEntry) => {
@@ -242,7 +252,9 @@ export function FileExplorer() {
         case 'new_dir': {
           const name = await showInputDialog('新建目录', '请输入目录名称:', '目录名')
           if (!name) return
-          const parentPath = node.isDir ? node.path : node.path.substring(0, node.path.lastIndexOf('/'))
+          const parentPath = node.isDir
+            ? node.path
+            : node.path.substring(0, node.path.lastIndexOf('/'))
           // 同级同名校验
           const parentEntries = dirCache[parentPath] ?? (await loadDir(parentPath))
           if (parentEntries.some((e) => e.name === name)) {
@@ -256,7 +268,9 @@ export function FileExplorer() {
         case 'new_file': {
           const title = await showInputDialog('新建文件', '请输入文件名（不含扩展名）:', '文件名')
           if (!title) return
-          const parentPath = node.isDir ? node.path : node.path.substring(0, node.path.lastIndexOf('/'))
+          const parentPath = node.isDir
+            ? node.path
+            : node.path.substring(0, node.path.lastIndexOf('/'))
           const fileName = `${title}.md`
           const parentEntries = dirCache[parentPath] ?? (await loadDir(parentPath))
           if (parentEntries.some((e) => e.name === fileName)) {
@@ -283,15 +297,18 @@ export function FileExplorer() {
           // 执行删除
           await fs.remove(node.path)
 
-          // 关闭标签页
-          if (!node.isDir) {
-            const tab = useEditorStore.getState().tabs.find(t => t.filePath === node.path)
+          if (node.isDir) {
+            // 清理目录及其子项的缓存
+            cleanupDeletedDir(node.path)
+          } else {
+            // 关闭标签页
+            const tab = useEditorStore.getState().tabs.find((t) => t.filePath === node.path)
             if (tab) {
               useEditorStore.getState().forceCloseTab(tab.id)
             }
           }
 
-          // 清理缓存并刷新
+          // 刷新父目录
           const parentPath = node.path.substring(0, node.path.lastIndexOf('/'))
           await refreshDir(parentPath)
           break
@@ -301,14 +318,11 @@ export function FileExplorer() {
           if (!name) return
           const chaptersDir = node.path
           const entries = dirCache[chaptersDir] ?? (await loadDir(chaptersDir))
-          const existingVolumes = entries.filter(
-            (e) => e.isDir && /^\d{2}_/.test(e.name),
-          )
-          const maxNum = existingVolumes.length > 0
-            ? Math.max(
-                ...existingVolumes.map((v) => Number.parseInt(v.name.substring(0, 2), 10)),
-              )
-            : 0
+          const existingVolumes = entries.filter((e) => e.isDir && /^\d{2}_/.test(e.name))
+          const maxNum =
+            existingVolumes.length > 0
+              ? Math.max(...existingVolumes.map((v) => Number.parseInt(v.name.substring(0, 2), 10)))
+              : 0
           const nextNum = String(maxNum + 1).padStart(2, '0')
           const volDir = `${chaptersDir}/${nextNum}_${name}`
           await fs.createDir(volDir)
@@ -318,16 +332,17 @@ export function FileExplorer() {
         case 'new_chapter': {
           const title = await showInputDialog('新增章节', '请输入章节标题:', '章节标题')
           if (!title) return
-          const parentDir = node.isDir ? node.path : node.path.substring(0, node.path.lastIndexOf('/'))
+          const parentDir = node.isDir
+            ? node.path
+            : node.path.substring(0, node.path.lastIndexOf('/'))
           const entries = dirCache[parentDir] ?? (await loadDir(parentDir))
-          const existingChapters = entries.filter(
-            (e) => !e.isDir && /^\d{2}-.+\.md$/.test(e.name),
-          )
-          const maxNum = existingChapters.length > 0
-            ? Math.max(
-                ...existingChapters.map((c) => Number.parseInt(c.name.substring(0, 2), 10)),
-              )
-            : 0
+          const existingChapters = entries.filter((e) => !e.isDir && /^\d{2}-.+\.md$/.test(e.name))
+          const maxNum =
+            existingChapters.length > 0
+              ? Math.max(
+                  ...existingChapters.map((c) => Number.parseInt(c.name.substring(0, 2), 10)),
+                )
+              : 0
           const nextNum = String(maxNum + 1).padStart(2, '0')
           const fileName = `${nextNum}-${title}.md`
           const filePath = `${parentDir}/${fileName}`
@@ -348,7 +363,7 @@ export function FileExplorer() {
           // 检查未保存修改
           const filePaths = collectFilePaths(node.path, entries, dirCache)
           const ms = useModelService.getState()
-          const dirtyFiles = filePaths.filter(p => ms.isDirty(p))
+          const dirtyFiles = filePaths.filter((p) => ms.isDirty(p))
           if (dirtyFiles.length > 0) {
             await showAlertDialog('提示', '卷内有未保存的文件，请先保存后再删除')
             return
@@ -368,10 +383,11 @@ export function FileExplorer() {
 
           // 关闭相关标签页
           const editorStore = useEditorStore.getState()
-          const tabsToClose = editorStore.tabs.filter(t =>
-            t.filePath.startsWith(node.path + '/') || t.filePath.startsWith(node.path + '\\')
+          const tabsToClose = editorStore.tabs.filter(
+            (t) =>
+              t.filePath.startsWith(`${node.path}/`) || t.filePath.startsWith(`${node.path}\\`),
           )
-          tabsToClose.forEach(tab => editorStore.forceCloseTab(tab.id))
+          tabsToClose.forEach((tab) => editorStore.forceCloseTab(tab.id))
 
           // 清理缓存并刷新
           cleanupDeletedDir(node.path)
@@ -381,7 +397,17 @@ export function FileExplorer() {
         }
       }
     },
-    [closeContextMenu, dirCache, loadDir, refreshDir, cleanupDeletedDir, showInputDialog, showConfirmDialog, showAlertDialog],
+    [
+      closeContextMenu,
+      dirCache,
+      loadDir,
+      refreshDir,
+      cleanupDeletedDir,
+      showInputDialog,
+      showConfirmDialog,
+      showAlertDialog,
+      getFs,
+    ],
   )
 
   // 点击其他地方关闭上下文菜单
@@ -418,16 +444,13 @@ export function FileExplorer() {
               onToggle={handleToggle}
               onFileClick={handleFileClick}
               onContextMenu={handleContextMenu}
+              onCloseContextMenu={closeContextMenu}
               loadDir={loadDir}
             />
           ))
       )}
       {contextMenu && (
-        <ContextMenu
-          state={contextMenu}
-          onAction={handleAction}
-          onClose={closeContextMenu}
-        />
+        <ContextMenu state={contextMenu} onAction={handleAction} onClose={closeContextMenu} />
       )}
       <InputDialog
         open={inputDialogOpen}

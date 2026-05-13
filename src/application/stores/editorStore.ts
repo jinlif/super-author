@@ -8,6 +8,7 @@ interface EditorStore {
   activeTabId: string | null
 
   openFile: (filePath: string, fileName: string, content: string) => void
+  openSettings: () => void
   setActiveTab: (tabId: string) => void
   requestCloseTab: (tabId: string) => void
   forceCloseTab: (tabId: string) => void
@@ -44,6 +45,21 @@ export const useEditorStore = create<EditorStore>((set) => ({
       useModelService.getState().getOrCreate(filePath, fileName, content)
       const id = `tab-${nextId++}`
       const newTab: EditorTab = { id, filePath, fileName }
+      return {
+        tabs: [...state.tabs, newTab],
+        activeTabId: id,
+      }
+    }),
+
+  openSettings: () =>
+    set((state) => {
+      const SETTINGS_ID = 'settings://'
+      const existing = state.tabs.find((t) => t.filePath === SETTINGS_ID)
+      if (existing) {
+        return { activeTabId: existing.id }
+      }
+      const id = `tab-${nextId++}`
+      const newTab: EditorTab = { id, filePath: SETTINGS_ID, fileName: '设置', type: 'settings' }
       return {
         tabs: [...state.tabs, newTab],
         activeTabId: id,

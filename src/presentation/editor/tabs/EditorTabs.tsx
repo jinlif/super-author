@@ -3,12 +3,10 @@ import { useEditorStore } from '../../../application/stores/editorStore'
 import './EditorTabs.css'
 
 function TabDirtyDot({ filePath }: { filePath: string }) {
-  const isDirty = useModelService(
-    (s) => {
-      const model = s.models[filePath]
-      return model ? model.versionId !== model.savedVersionId : false
-    },
-  )
+  const isDirty = useModelService((s) => {
+    const model = s.models[filePath]
+    return model ? model.versionId !== model.savedVersionId : false
+  })
   if (!isDirty) return null
   return <span className="tab-dirty">{'●'}</span>
 }
@@ -39,7 +37,8 @@ export function EditorTabs() {
           }}
         >
           <span className="tab-label">
-            <TabDirtyDot filePath={tab.filePath} />
+            {tab.type !== 'settings' && <TabDirtyDot filePath={tab.filePath} />}
+            {tab.type === 'settings' ? '⚙️ ' : ''}
             {tab.fileName}
           </span>
           <button

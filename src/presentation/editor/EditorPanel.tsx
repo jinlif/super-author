@@ -3,9 +3,11 @@ import type * as Monaco from 'monaco-editor'
 import type { editor } from 'monaco-editor'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useModelService } from '../../application/services/ModelService'
+import { useAgentStore } from '../../application/stores/agentStore'
 import { useBookStore } from '../../application/stores/bookStore'
 import { useEditorStore } from '../../application/stores/editorStore'
 import { ConfirmSaveDialog } from '../components/ConfirmSaveDialog'
+import { SettingsPanel } from '../settings/SettingsPanel'
 import { EditorStatusBar } from './EditorStatusBar'
 import { EditorTabs } from './tabs/EditorTabs'
 import './EditorPanel.css'
@@ -29,6 +31,7 @@ export function EditorPanel() {
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null
   const activeUri = activeTab?.filePath ?? null
   const hasTabs = tabs.length > 0 && activeTab !== null
+  const isSettingsTab = activeTab?.type === 'settings'
 
   // 保存：通过 filePath 查找 Chapter，不依赖 currentChapter
   const doSave = useCallback(
@@ -38,12 +41,22 @@ export function EditorPanel() {
       const model = ms.models[filePath]
       if (!model) return
       const chapter = useBookStore.getState().chapters.find((c) => c.filePath === filePath)
-      if (!chapter) return
-      try {
-        await saveChapter(model.value, chapter)
-        ms.markClean(filePath)
-      } catch {
-        console.warn('保存失败')
+      if (chapter) {
+        // 章节在 store 中 — 通过 saveChapter 完整保存（更新 store）
+        try {
+          await saveChapter(model.value, chapter)
+          ms.markClean(filePath)
+        } catch {
+          console.warn('保存失败')
+        }
+      } else {
+        // 章节不在 store 中（如通过 FileExplorer 直接打开）— 直接写文件系统
+        try {
+          await useBookStore.getState()._chapterRepo.writeChapter(filePath, model.value)
+          ms.markClean(filePath)
+        } catch {
+          console.warn('保存失败')
+        }
       }
     },
     [saveChapter],
@@ -109,7 +122,7 @@ export function EditorPanel() {
     if (chapter) {
       useBookStore.setState({ currentChapter: chapter })
     }
-  }, [activeUri])
+  }, [activeUri, getOrCreateMonacoModel])
 
   // 编辑时更新 Model
   const handleChange = useCallback(
@@ -164,14 +177,21 @@ export function EditorPanel() {
     }
   }, [hasTabs])
 
+  // Agent 临时章节：创建只读标签
+  const tempChapterData = useAgentStore((s) => s.tempChapterData)
+  useEffect(() => {
+    if (!tempChapterData) return
+    const id = `temp-${Date.now()}`
+    const fileName = `AI 生成 - 待审阅: ${tempChapterData.title}`
+    useModelService.getState().getOrCreate(id, fileName, tempChapterData.content)
+    useEditorStore.getState().openFile(id, fileName, tempChapterData.content)
+  }, [tempChapterData])
+
   return (
     <div className="editor-panel">
       <EditorTabs />
       <div className="editor-content">
-        <div
-          className="editor-welcome"
-          style={{ display: hasTabs ? 'none' : 'flex' }}
-        >
+        <div className="editor-welcome" style={{ display: hasTabs ? 'none' : 'flex' }}>
           <div className="welcome-content">
             <h1>超级作者</h1>
             <p>选择章节开始编辑</p>
@@ -179,7 +199,7 @@ export function EditorPanel() {
         </div>
         <div
           className="editor-area"
-          style={{ display: hasTabs ? 'flex' : 'none' }}
+          style={{ display: hasTabs && !isSettingsTab ? 'flex' : 'none' }}
         >
           <Editor
             height="100%"
@@ -198,6 +218,11 @@ export function EditorPanel() {
             }}
           />
         </div>
+        {hasTabs && isSettingsTab && (
+          <div className="editor-settings-area">
+            <SettingsPanel />
+          </div>
+        )}
       </div>
       <EditorStatusBar liveWordCount={liveWordCount} />
       <ConfirmSaveDialog

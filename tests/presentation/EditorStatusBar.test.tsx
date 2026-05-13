@@ -1,9 +1,9 @@
 // tests/presentation/EditorStatusBar.test.tsx
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { useModelService } from '../../src/application/services/ModelService'
 import { useBookStore } from '../../src/application/stores/bookStore'
 import { useEditorStore } from '../../src/application/stores/editorStore'
-import { useModelService } from '../../src/application/services/ModelService'
 import { MockFileService } from '../../src/infrastructure/MockFileService'
 import { EditorStatusBar } from '../../src/presentation/editor/EditorStatusBar'
 
@@ -16,9 +16,8 @@ describe('EditorStatusBar', () => {
       chapters: [],
       currentChapter: null,
       isLoading: false,
-      baseDir: '/books',
     })
-    useBookStore.getState().setFileService(fs)
+    useBookStore.getState().setFileService(fs, '/home/user')
     useEditorStore.setState({ tabs: [], activeTabId: null })
     useModelService.setState({
       models: {},

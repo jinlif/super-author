@@ -3,6 +3,7 @@ import type { Book } from '../../domain/types/book'
 import type { Chapter } from '../../domain/types/chapter'
 import { BookRepository } from '../../infrastructure/BookRepository'
 import { ChapterRepository } from '../../infrastructure/ChapterRepository'
+import { ConfigService } from '../../infrastructure/ConfigService'
 import { createFileService } from '../../infrastructure/createFileService'
 import type { IFileService } from '../../infrastructure/IFileService'
 
@@ -12,20 +13,21 @@ interface BookStore {
   chapters: Chapter[]
   currentChapter: Chapter | null
   isLoading: boolean
-  baseDir: string
 
   _bookRepo: BookRepository
   _chapterRepo: ChapterRepository
-  setFileService: (fs: IFileService) => void
+  _fs: IFileService
+  _homeDir: string | null
+  _configService: ConfigService | null
+  setFileService: (fs: IFileService, homeDir: string) => void
 
   loadBooks: () => Promise<void>
   createBook: (title: string, author: string) => Promise<Book>
   openBook: (book: Book) => Promise<void>
   closeBook: () => void
-  createChapter: (title: string) => Promise<void>
+  createChapter: (title: string, volume?: string) => Promise<void>
   loadChapter: (chapter: Chapter) => Promise<string>
   saveChapter: (content: string, chapter?: Chapter) => Promise<void>
-  setBaseDir: (dir: string) => void
 }
 
 function createRepos(fs?: IFileService) {
@@ -33,11 +35,21 @@ function createRepos(fs?: IFileService) {
   return {
     bookRepo: new BookRepository(fileService),
     chapterRepo: new ChapterRepository(fileService),
+    fs: fileService,
   }
 }
 
 export const useBookStore = create<BookStore>((set, get) => {
-  const { bookRepo, chapterRepo } = createRepos()
+  const { bookRepo, chapterRepo, fs } = createRepos()
+
+  async function getConfigService(): Promise<ConfigService> {
+    const state = get()
+    if (state._configService) return state._configService
+    const homeDir = await state._fs.getHomeDir()
+    const cs = new ConfigService(state._fs, homeDir)
+    set({ _homeDir: homeDir, _configService: cs })
+    return cs
+  }
 
   return {
     books: [],
@@ -45,25 +57,35 @@ export const useBookStore = create<BookStore>((set, get) => {
     chapters: [],
     currentChapter: null,
     isLoading: false,
-    baseDir: '/books',
 
     _bookRepo: bookRepo,
     _chapterRepo: chapterRepo,
+    _fs: fs,
+    _homeDir: null,
+    _configService: null,
 
-    setFileService: (fs: IFileService) => {
+    setFileService: (fs: IFileService, homeDir: string) => {
       const repos = createRepos(fs)
-      set({ _bookRepo: repos.bookRepo, _chapterRepo: repos.chapterRepo })
+      set({
+        _bookRepo: repos.bookRepo,
+        _chapterRepo: repos.chapterRepo,
+        _fs: repos.fs,
+        _homeDir: homeDir,
+        _configService: new ConfigService(fs, homeDir),
+      })
     },
 
     loadBooks: async () => {
       const repo = get()._bookRepo
-      const books = await repo.listBooks(get().baseDir)
+      const cs = await getConfigService()
+      const books = await repo.listBooks(cs.booksDir)
       set({ books })
     },
 
     createBook: async (title: string, author: string) => {
       const repo = get()._bookRepo
-      const book = await repo.createBook(get().baseDir, { title, author })
+      const cs = await getConfigService()
+      const book = await repo.createBook(cs.booksDir, { title, author })
       set((state) => ({ books: [...state.books, book] }))
       return book
     },
@@ -88,11 +110,11 @@ export const useBookStore = create<BookStore>((set, get) => {
       })
     },
 
-    createChapter: async (title: string) => {
+    createChapter: async (title: string, volume?: string) => {
       const book = get().currentBook
       if (!book) throw new Error('没有打开书籍')
       const repo = get()._chapterRepo
-      const chapter = await repo.createChapter(book.directory, title)
+      const chapter = await repo.createChapter(book.directory, title, volume)
       set((state) => ({ chapters: [...state.chapters, chapter] }))
     },
 
@@ -115,7 +137,5 @@ export const useBookStore = create<BookStore>((set, get) => {
         chapters: get().chapters.map((c) => (c.id === ch.id ? updated : c)),
       })
     },
-
-    setBaseDir: (dir: string) => set({ baseDir: dir }),
   }
 })

@@ -74,4 +74,8 @@ npm run format       # Biome 格式化
 
 ## 设计参考
 
-详细设计文档见 [docs/superpowers/specs/](docs/superpowers/specs/)，实施计划见 [docs/superpowers/plans/](docs/superpowers/plans/)。
+UI 设计规范见 [DESIGN.md](DESIGN.md)，详细设计文档见 [docs/superpowers/specs/](docs/superpowers/specs/)，实施计划见 [docs/superpowers/plans/](docs/superpowers/plans/)。
+
+## 外部 API 参考
+
+- [MiMo API 文档](docs/context/mimo-api.md) — 小米 MiMo 大模型 API（Anthropic/OpenAI 双格式），含 thinking 内容块回传要求

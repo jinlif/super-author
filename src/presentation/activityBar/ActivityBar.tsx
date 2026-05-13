@@ -1,3 +1,4 @@
+import { useEditorStore } from '../../application/stores/editorStore'
 import { useLayoutStore } from '../../application/stores/layoutStore'
 import type { ActivityBarItem } from '../../domain/types/layout'
 import './ActivityBar.css'
@@ -10,14 +11,21 @@ interface ActivityIcon {
 
 const items: ActivityIcon[] = [
   { id: 'files', label: '文件', icon: '\u{1F4C1}' },
-  { id: 'search', label: '搜索', icon: '\u{1F50D}' },
-  { id: 'characters', label: '角色', icon: '\u{1F464}' },
   { id: 'settings', label: '设置', icon: '\u{2699}\u{FE0F}' },
 ]
 
 export function ActivityBar() {
   const activeActivity = useLayoutStore((s) => s.activeActivity)
   const setActiveActivity = useLayoutStore((s) => s.setActiveActivity)
+  const openSettings = useEditorStore((s) => s.openSettings)
+
+  const handleClick = (item: ActivityIcon) => {
+    if (item.id === 'settings') {
+      openSettings()
+    } else {
+      setActiveActivity(item.id)
+    }
+  }
 
   return (
     <div className="activity-bar">
@@ -26,7 +34,7 @@ export function ActivityBar() {
           type="button"
           key={item.id}
           className={`activity-icon ${activeActivity === item.id ? 'active' : ''}`}
-          onClick={() => setActiveActivity(item.id)}
+          onClick={() => handleClick(item)}
           title={item.label}
         >
           <span className="activity-icon-emoji">{item.icon}</span>

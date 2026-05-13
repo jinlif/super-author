@@ -13,9 +13,8 @@ describe('bookStore', () => {
       chapters: [],
       currentChapter: null,
       isLoading: false,
-      baseDir: '/books',
     })
-    useBookStore.getState().setFileService(fs)
+    useBookStore.getState().setFileService(fs, '/home/user')
   })
 
   it('初始状态', () => {

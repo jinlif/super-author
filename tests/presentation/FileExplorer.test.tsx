@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { useModelService } from '../../src/application/services/ModelService'
 import { useBookStore } from '../../src/application/stores/bookStore'
 import { useEditorStore } from '../../src/application/stores/editorStore'
-import { useModelService } from '../../src/application/services/ModelService'
 import { MockFileService } from '../../src/infrastructure/MockFileService'
 import { FileExplorer } from '../../src/presentation/fileExplorer/FileExplorer'
 
@@ -31,7 +31,7 @@ describe('FileExplorer', () => {
       currentChapter: null,
       isLoading: false,
     })
-    useBookStore.getState().setFileService(fs)
+    useBookStore.getState().setFileService(fs, '/home/user')
     useEditorStore.setState({ tabs: [], activeTabId: null })
   })
 
@@ -49,8 +49,13 @@ describe('FileExplorer', () => {
     await fs.writeFile(
       '/home/user/.superauthor/books/测试书/book.json',
       JSON.stringify({
-        title: '测试书', author: '作者', description: '',
-        tags: [], style: '', createdAt: '', updatedAt: '',
+        title: '测试书',
+        author: '作者',
+        description: '',
+        tags: [],
+        style: '',
+        createdAt: '',
+        updatedAt: '',
       }),
     )
     useBookStore.setState({
@@ -82,10 +87,7 @@ describe('FileExplorer', () => {
     await fs.createDir('/home/user/.superauthor/books/书/chapters')
     await fs.createDir('/home/user/.superauthor/books/书/outline')
     await fs.createDir('/home/user/.superauthor/books/书/characters')
-    await fs.writeFile(
-      '/home/user/.superauthor/books/书/book.json',
-      createBookJson('书'),
-    )
+    await fs.writeFile('/home/user/.superauthor/books/书/book.json', createBookJson('书'))
     useBookStore.setState({
       currentBook: {
         id: 'test',
@@ -489,7 +491,9 @@ describe('FileExplorer', () => {
       useEditorStore.getState().openFile(filePath, '01-第一章.md', '# 第一章\n\n')
 
       // 创建模型并修改
-      const model = useModelService.getState().getOrCreate(filePath, '01-第一章.md', '# 第一章\n\n')
+      const _model = useModelService
+        .getState()
+        .getOrCreate(filePath, '01-第一章.md', '# 第一章\n\n')
       useModelService.getState().updateValue(filePath, '# 修改后的内容\n\n')
 
       // 验证模型是脏的

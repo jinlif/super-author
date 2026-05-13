@@ -22,4 +22,12 @@ export class TauriFileService implements IFileService {
   async exists(path: string): Promise<boolean> {
     return invoke<boolean>('path_exists', { path })
   }
+
+  async remove(path: string): Promise<void> {
+    return invoke<void>('remove_file', { path })
+  }
+
+  async getHomeDir(): Promise<string> {
+    return invoke<string>('get_home_dir')
+  }
 }

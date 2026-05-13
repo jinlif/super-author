@@ -16,7 +16,7 @@ describe('Layout', () => {
       agentVisible: true,
       panelSizes: { sidebar: 280, agent: 360 },
     })
-    useEditorStore.setState({ tabs: [], activeTabId: null, pendingCloseTabId: null, pendingCloseTabFileName: '' })
+    useEditorStore.setState({ tabs: [], activeTabId: null })
     useBookStore.setState({
       books: [],
       currentBook: {
@@ -32,18 +32,14 @@ describe('Layout', () => {
       },
       chapters: [],
       currentChapter: null,
-      chapterContent: '',
       isLoading: false,
-      baseDir: '/books',
     })
-    useBookStore.getState().setFileService(new MockFileService())
+    useBookStore.getState().setFileService(new MockFileService(), '/home/user')
   })
 
   it('渲染四个面板区域', () => {
     render(<Layout />)
     expect(screen.getByTitle('文件')).toBeInTheDocument()
-    expect(screen.getByTitle('搜索')).toBeInTheDocument()
-    expect(screen.getByTitle('角色')).toBeInTheDocument()
     expect(screen.getByTitle('设置')).toBeInTheDocument()
     expect(screen.getByText('超级作者')).toBeInTheDocument()
     expect(screen.getByText('AI 助手')).toBeInTheDocument()

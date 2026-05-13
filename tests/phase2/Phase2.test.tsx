@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useBookStore } from '../../src/application/stores/bookStore'
@@ -17,17 +17,15 @@ describe('Phase 2 集成测试', () => {
       agentVisible: true,
       panelSizes: { sidebar: 280, agent: 360 },
     })
-    useEditorStore.setState({ tabs: [], activeTabId: null, pendingCloseTabId: null, pendingCloseTabFileName: '' })
+    useEditorStore.setState({ tabs: [], activeTabId: null })
     useBookStore.setState({
       books: [],
       currentBook: null,
       chapters: [],
       currentChapter: null,
-      chapterContent: '',
       isLoading: false,
-      baseDir: '/books',
     })
-    useBookStore.getState().setFileService(new MockFileService())
+    useBookStore.getState().setFileService(new MockFileService(), '/home/user')
   })
 
   it('无书籍时显示 BookSelector', () => {
@@ -44,7 +42,9 @@ describe('Phase 2 集成测试', () => {
 
     render(<Layout />)
     expect(screen.getByText('资源管理器')).toBeInTheDocument()
-    expect(screen.getByText('选择章节开始编辑')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('chapters')).toBeInTheDocument()
+    })
   })
 
   it('完整流程：新建书籍 → 新建章 → 编辑内容', async () => {
@@ -58,7 +58,9 @@ describe('Phase 2 集成测试', () => {
 
     // 应该显示侧边栏和编辑器
     expect(screen.getByText('资源管理器')).toBeInTheDocument()
-    expect(screen.getByText('选择章节开始编辑')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('chapters')).toBeInTheDocument()
+    })
   })
 
   it('状态栏显示字数信息', async () => {

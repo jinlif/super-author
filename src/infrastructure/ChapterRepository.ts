@@ -12,7 +12,18 @@ export class ChapterRepository {
     const chapters: Chapter[] = []
 
     for (const entry of entries) {
-      if (!entry.isDir && entry.name.endsWith('.md')) {
+      if (entry.isDir) {
+        // 卷目录 — 递归扫描卷内章节
+        const volumeName = entry.name
+        const volumeEntries = await this.fs.readDir(entry.path)
+        for (const volumeEntry of volumeEntries) {
+          if (!volumeEntry.isDir && volumeEntry.name.endsWith('.md')) {
+            const content = await this.fs.readFile(volumeEntry.path)
+            chapters.push(this.parseChapter(bookDir, volumeEntry, content, volumeName))
+          }
+        }
+      } else if (entry.name.endsWith('.md')) {
+        // 根级别章节
         const content = await this.fs.readFile(entry.path)
         chapters.push(this.parseChapter(bookDir, entry, content))
       }
@@ -29,12 +40,17 @@ export class ChapterRepository {
     return this.fs.writeFile(filePath, content)
   }
 
-  async createChapter(bookDir: string, title: string): Promise<Chapter> {
+  async createChapter(bookDir: string, title: string, volume?: string): Promise<Chapter> {
     const chapters = await this.listChapters(bookDir)
-    const nextOrder = chapters.length > 0 ? Math.max(...chapters.map((c) => c.order)) + 1 : 1
+    const chaptersInScope = volume
+      ? chapters.filter((c) => c.volume === volume)
+      : chapters.filter((c) => !c.volume)
+    const nextOrder =
+      chaptersInScope.length > 0 ? Math.max(...chaptersInScope.map((c) => c.order)) + 1 : 1
     const orderStr = String(nextOrder).padStart(2, '0')
     const fileName = `${orderStr}-${title}.md`
-    const filePath = `${bookDir}/chapters/${fileName}`
+    const baseDir = volume ? `${bookDir}/chapters/${volume}` : `${bookDir}/chapters`
+    const filePath = `${baseDir}/${fileName}`
     const now = new Date().toISOString()
 
     const initialContent = `# ${title}\n\n`
@@ -48,6 +64,7 @@ export class ChapterRepository {
       status: 'draft',
       wordCount: 0,
       filePath,
+      volume,
       createdAt: now,
       updatedAt: now,
     }
@@ -57,8 +74,8 @@ export class ChapterRepository {
     bookDir: string,
     entry: { name: string; path: string },
     content: string,
+    volume?: string,
   ): Chapter {
-    // 文件名格式: "01-标题.md"
     const match = entry.name.match(/^(\d+)-(.+)\.md$/)
     let order = 99
     let title = entry.name.replace(/\.md$/, '')
@@ -79,6 +96,7 @@ export class ChapterRepository {
       status: 'draft',
       wordCount,
       filePath: entry.path,
+      volume,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }

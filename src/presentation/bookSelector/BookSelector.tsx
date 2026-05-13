@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAgentStore } from '../../application/stores/agentStore'
 import { useBookStore } from '../../application/stores/bookStore'
 import type { Book } from '../../domain/types/book'
 import './BookSelector.css'
@@ -8,6 +9,8 @@ export function BookSelector() {
   const loadBooks = useBookStore((s) => s.loadBooks)
   const openBook = useBookStore((s) => s.openBook)
   const createBook = useBookStore((s) => s.createBook)
+  const reloadCommands = useAgentStore((s) => s.reloadCommands)
+  const initRegistry = useAgentStore((s) => s.initRegistry)
   const [showCreate, setShowCreate] = useState(false)
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
@@ -16,10 +19,16 @@ export function BookSelector() {
     loadBooks()
   }, [loadBooks])
 
+  const handleOpenBook = async (book: Book) => {
+    await openBook(book)
+    await reloadCommands(book.directory)
+    await initRegistry(book.directory)
+  }
+
   const handleCreate = async () => {
     if (!title.trim() || !author.trim()) return
     const book = await createBook(title.trim(), author.trim())
-    await openBook(book)
+    await handleOpenBook(book)
     setTitle('')
     setAuthor('')
     setShowCreate(false)
@@ -37,9 +46,9 @@ export function BookSelector() {
           <div
             key={book.id}
             className="book-card"
-            onClick={() => openBook(book)}
+            onClick={() => handleOpenBook(book)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') openBook(book)
+              if (e.key === 'Enter' || e.key === ' ') handleOpenBook(book)
             }}
             role="button"
             tabIndex={0}

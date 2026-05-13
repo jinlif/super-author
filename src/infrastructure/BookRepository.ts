@@ -1,6 +1,33 @@
 import type { Book, BookMeta, CreateBookInput } from '../domain/types/book'
 import type { IFileService } from './IFileService'
 
+const DEFAULT_COMMANDS: Record<string, string> = {
+  'continue.md': `---
+name: continue
+description: 续写当前章节
+---
+请根据上文内容，继续往下写约 500 字。保持风格一致，情节自然推进。
+`,
+  'polish.md': `---
+name: polish
+description: 润色改写选中文本
+---
+请对以下文本进行润色改写，提升文学性和可读性，保持原意不变：
+
+{cursor}
+`,
+  'outline.md': `---
+name: outline
+description: 生成章节大纲
+---
+请根据当前故事进展，为下一章生成一个大纲，包含：
+1. 章节标题建议
+2. 主要情节节点
+3. 涉及角色
+4. 预计字数
+`,
+}
+
 export class BookRepository {
   constructor(private fs: IFileService) {}
 
@@ -32,7 +59,11 @@ export class BookRepository {
     await this.fs.createDir(`${bookDir}/chapters`)
     await this.fs.createDir(`${bookDir}/outline`)
     await this.fs.createDir(`${bookDir}/characters`)
-    await this.fs.createDir(`${bookDir}/.super-author/history`)
+    await this.fs.createDir(`${bookDir}/.super-author/skills`)
+    await this.fs.createDir(`${bookDir}/.super-author/commands`)
+    for (const [name, content] of Object.entries(DEFAULT_COMMANDS)) {
+      await this.fs.writeFile(`${bookDir}/.super-author/commands/${name}`, content)
+    }
 
     const meta: BookMeta = {
       title: input.title,

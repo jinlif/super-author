@@ -6,4 +6,6 @@ export interface IFileService {
   readDir(path: string): Promise<FileEntry[]>
   createDir(path: string): Promise<void>
   exists(path: string): Promise<boolean>
+  remove(path: string): Promise<void>
+  getHomeDir(): Promise<string>
 }
