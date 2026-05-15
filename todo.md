@@ -18,29 +18,9 @@
 
 ---
 
-## 当前：Phase 3.8 架构重构
+## 当前：Phase 3.9 （待补充）
 
-### 3.8a 数据模型 & 存储层
-
-- [ ] **3.8a.1** 历史会话持久化 — ConversationStore 接入 `ConfigService.historyDir`，移除 `_conversationCache` 纯内存缓存
-- [ ] **3.8a.2** 目录描述系统 — BookMeta 扩展 `dirDescriptions`，book.json 存储/读取，系统目录给默认描述
-- [ ] **3.8a.3** 书籍简介 DESCRIPTION.md — 创建书籍时生成，加载时读取作为 description
-
-### 3.8b 系统提示词重构
-
-- [ ] **3.8b.1** SystemPrompt 重写 — 新签名 `(tools, bookMeta, dirDescriptions, chapterSummaries?) => string`，删除 ContextBuilder
-
-### 3.8c 工具全面重构
-
-- [ ] **3.8c.1** 删除旧工具 + 基础设施调整
-- [ ] **3.8c.2** 实现 7 个新通用工具（ListDir / CreateEntry / GetFileInfo / DeleteEntry / RenameEntry / Grep / UpdateFile）
-- [ ] **3.8c.3** UI 层适配 — 系统目录/文件禁用重命名和删除，移除旧 write_chapter 相关逻辑
-
-### 3.8d SubAgent 支持
-
-- [ ] **3.8d.1** SubAgent 类型定义
-- [ ] **3.8d.2** SubAgent 工具实现
-- [ ] **3.8d.3** 章节摘要系统 — `ChapterSummaryService`，存储于 `.super-author/chapter-summaries.json`
+> 3.8 已全部完成，等待补充 3.9 内容
 
 ---
 

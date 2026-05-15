@@ -80,7 +80,7 @@ UI 设计规范见 [DESIGN.md](DESIGN.md)，详细设计文档见 [docs/superpow
 
 - [MiMo API 文档](docs/context/mimo-api.md) — 小米 MiMo 大模型 API（Anthropic/OpenAI 双格式），含 thinking 内容块回传要求
 
-## 完成任务时请严格遵守下述四原则
+## 完成任务时请严格遵守下述五原则
 
 ### 1. Think Before Coding
 
@@ -123,7 +123,21 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-### 4. Goal-Driven Execution
+### 4. Commit After Each Feature Point
+
+**每完成一个小功能点，立即提交代码并删除相关 todo。**
+
+- 每个独立的功能点完成后，执行 `git add -A && git commit -m "feat: 功能描述"`
+- 同步更新 `todo.md`：删除该功能点对应的条目
+- 不要攒多个功能点一起提交
+- commit message 格式：
+  - 新功能：`feat: 描述`
+  - Bug 修复：`fix: 描述`
+  - 重构：`refactor: 描述`
+  - 文档：`docs: 描述`
+  - 测试：`test: 描述`
+
+### 5. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
