@@ -6,7 +6,7 @@ import type {
   ToolResultContentBlock,
 } from "../../domain/types/agent";
 import type { IProvider } from "./IProvider";
-import { createTauriFetch } from "./tauriFetch";
+import { tauriFetch } from "./tauriFetch";
 
 function convertMessages(messages: AgentMessage[]): Anthropic.MessageParam[] {
   return messages.map((msg) => {
@@ -100,7 +100,7 @@ export class ClaudeProvider implements IProvider {
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
       dangerouslyAllowBrowser: true,
-      fetch: createTauriFetch(config.apiKey),
+      fetch: tauriFetch,
     });
   }
 
