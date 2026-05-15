@@ -2,10 +2,15 @@ import type { Conversation, ConversationSummary } from '../../domain/types/agent
 import type { IFileService } from '../../infrastructure/IFileService'
 
 export class ConversationStore {
-  constructor(private fs: IFileService) {}
+  constructor(
+    private fs: IFileService,
+    private historyDir: string,
+  ) {}
 
   private getDir(bookDir: string): string {
-    return `${bookDir}/.super-author/conversations`
+    // 从 bookDir 提取书籍目录名作为子目录
+    const bookName = bookDir.replace(/\\/g, '/').split('/').pop() ?? 'default'
+    return `${this.historyDir}/${bookName}`
   }
 
   private getPath(bookDir: string, id: string): string {
@@ -74,9 +79,7 @@ export class ConversationStore {
 
   async delete(bookDir: string, id: string): Promise<void> {
     try {
-      await this.fs.writeFile(this.getPath(bookDir, id), '')
-      // Note: IFileService doesn't have a delete method, so we overwrite with empty
-      // In a real implementation, use Tauri fs.removeFile
+      await this.fs.remove(this.getPath(bookDir, id))
     } catch {
       // 文件不存在视为删除成功
     }

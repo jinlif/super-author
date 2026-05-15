@@ -15,9 +15,15 @@ export function AgentPanel() {
   const clearConversation = useAgentStore((s) => s.clearConversation)
   const conversationHistory = useAgentStore((s) => s.conversationHistory)
   const loadConversationFromHistory = useAgentStore((s) => s.loadConversationFromHistory)
+  const loadConversationHistory = useAgentStore((s) => s.loadConversationHistory)
 
   const [showHistory, setShowHistory] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // 组件挂载时加载历史列表
+  useEffect(() => {
+    loadConversationHistory()
+  }, [loadConversationHistory])
 
   useEffect(() => {
     if (!showHistory) return

@@ -8,15 +8,16 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { ContextMenu, type ContextMenuAction, type ContextMenuState } from './ContextMenu'
 import { FileTreeNode } from './FileTreeNode'
 import { InputDialog } from './InputDialog'
+import { TwoFieldDialog } from './TwoFieldDialog'
 import './FileExplorer.css'
 
 interface DirCache {
   [dirPath: string]: FileEntry[]
 }
 
-/** 将路径统一为正斜杠，兼容 Windows 反斜杠 */
+/** 将路径统一为正斜杠，兼容 Windows 反斜杠，并去除尾部斜杠 */
 function normalizePath(p: string): string {
-  return p.replace(/\\/g, '/')
+  return p.replace(/\\/g, '/').replace(/\/+$/, '')
 }
 
 function getParentDirName(filePath: string): string {
@@ -62,6 +63,8 @@ async function hasMdFilesRecursive(
 
 export function FileExplorer() {
   const currentBook = useBookStore((s) => s.currentBook)
+  const updateBookMeta = useBookStore((s) => s.updateBookMeta)
+  const fileExplorerRefreshKey = useBookStore((s) => s.fileExplorerRefreshKey)
   const openFile = useEditorStore((s) => s.openFile)
   const getFs = useCallback(() => useBookStore.getState()._fs, [])
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() => new Set())
@@ -87,6 +90,43 @@ export function FileExplorer() {
   const [alertTitle, setAlertTitle] = useState('')
   const [alertMessage, setAlertMessage] = useState('')
   const alertResolveRef = useRef<(() => void) | null>(null)
+
+  const [twoFieldOpen, setTwoFieldOpen] = useState(false)
+  const [twoFieldTitle, setTwoFieldTitle] = useState('')
+  const [twoField1Label, setTwoField1Label] = useState('')
+  const [twoField1Placeholder, setTwoField1Placeholder] = useState('')
+  const [twoField1Default, setTwoField1Default] = useState('')
+  const [twoField2Label, setTwoField2Label] = useState('')
+  const [twoField2Placeholder, setTwoField2Placeholder] = useState('')
+  const [twoField2Default, setTwoField2Default] = useState('')
+  const twoFieldResolveRef = useRef<
+    ((value: { field1: string; field2: string } | null) => void) | null
+  >(null)
+
+  const showTwoFieldDialog = useCallback(
+    (opts: {
+      title: string
+      field1Label: string
+      field1Placeholder?: string
+      field1Default?: string
+      field2Label: string
+      field2Placeholder?: string
+      field2Default?: string
+    }): Promise<{ field1: string; field2: string } | null> => {
+      return new Promise((resolve) => {
+        setTwoFieldTitle(opts.title)
+        setTwoField1Label(opts.field1Label)
+        setTwoField1Placeholder(opts.field1Placeholder ?? '')
+        setTwoField1Default(opts.field1Default ?? '')
+        setTwoField2Label(opts.field2Label)
+        setTwoField2Placeholder(opts.field2Placeholder ?? '')
+        setTwoField2Default(opts.field2Default ?? '')
+        setTwoFieldOpen(true)
+        twoFieldResolveRef.current = resolve
+      })
+    },
+    [],
+  )
 
   const showInputDialog = useCallback(
     (title: string, message: string, placeholder?: string): Promise<string | null> => {
@@ -136,10 +176,16 @@ export function FileExplorer() {
       try {
         const entries = await fs.readDir(dirPath)
         // 规范化路径，确保 Windows 反斜杠统一为正斜杠
-        const normalizedEntries = entries.map((e) => ({
-          ...e,
-          path: normalizePath(e.path),
-        }))
+        const normalizedEntries = entries
+          .map((e) => ({
+            ...e,
+            path: normalizePath(e.path),
+          }))
+          .sort((a, b) => {
+            // 目录在前，文件在后；同级别按字母序排列
+            if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
+            return a.name.localeCompare(b.name)
+          })
         const normalizedDir = normalizePath(dirPath)
         setDirCache((prev) => ({ ...prev, [normalizedDir]: normalizedEntries }))
         return normalizedEntries
@@ -160,6 +206,18 @@ export function FileExplorer() {
       setDirCache({})
     }
   }, [rootPath, loadDir])
+
+  // 监听 fileExplorerRefreshKey 变化，刷新已展开的目录
+  useEffect(() => {
+    if (fileExplorerRefreshKey > 0 && rootPath) {
+      // 刷新根目录
+      loadDir(rootPath)
+      // 刷新所有已展开的目录
+      for (const dirPath of expandedDirs) {
+        loadDir(dirPath)
+      }
+    }
+  }, [fileExplorerRefreshKey, rootPath, loadDir, expandedDirs])
 
   const handleToggle = useCallback(
     async (entry: FileEntry) => {
@@ -208,6 +266,25 @@ export function FileExplorer() {
     })
   }, [])
 
+  const handleBlankContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!rootPath) return
+      // 仅在点击空白区域（非 FileTreeNode）时触发
+      if ((e.target as HTMLElement).closest('.file-tree-node')) return
+      e.preventDefault()
+      e.stopPropagation()
+      const rootName = rootPath.split('/').pop() || rootPath
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        node: { name: rootName, path: rootPath, isDir: true },
+        parentName: '',
+        isRoot: true,
+      })
+    },
+    [rootPath],
+  )
+
   const closeContextMenu = useCallback(() => {
     setContextMenu(null)
   }, [])
@@ -250,8 +327,15 @@ export function FileExplorer() {
 
       switch (action) {
         case 'new_dir': {
-          const name = await showInputDialog('新建目录', '请输入目录名称:', '目录名')
-          if (!name) return
+          const result = await showTwoFieldDialog({
+            title: '新建目录',
+            field1Label: '目录名称',
+            field1Placeholder: '目录名',
+            field2Label: '目录描述（选填）',
+            field2Placeholder: '简要描述此目录的用途',
+          })
+          if (!result) return
+          const { field1: name, field2: description } = result
           const parentPath = node.isDir
             ? node.path
             : node.path.substring(0, node.path.lastIndexOf('/'))
@@ -262,6 +346,15 @@ export function FileExplorer() {
             return
           }
           await fs.createDir(`${parentPath}/${name}`)
+          // 写入描述到 book.json
+          if (description && currentBook) {
+            const relPath = `${parentPath.replace(`${rootPath}/`, '')}/${name}/`
+            const updatedBook = {
+              ...currentBook,
+              dirDescriptions: { ...currentBook.dirDescriptions, [relPath]: description },
+            }
+            await updateBookMeta(updatedBook)
+          }
           await refreshDir(parentPath)
           break
         }
@@ -313,9 +406,101 @@ export function FileExplorer() {
           await refreshDir(parentPath)
           break
         }
+        case 'rename': {
+          const oldName = node.name
+          const ext = oldName.includes('.') ? oldName.substring(oldName.lastIndexOf('.')) : ''
+          const nameWithoutExt = ext ? oldName.substring(0, oldName.length - ext.length) : oldName
+
+          if (node.isDir) {
+            // 目录重命名：使用 TwoFieldDialog，支持修改描述
+            const relPath = `${node.path.replace(`${rootPath}/`, '')}/`
+            const currentDesc = currentBook?.dirDescriptions?.[relPath] ?? ''
+            const result = await showTwoFieldDialog({
+              title: '重命名目录',
+              field1Label: '目录名称',
+              field1Default: nameWithoutExt,
+              field2Label: '目录描述',
+              field2Placeholder: '简要描述此目录的用途',
+              field2Default: currentDesc,
+            })
+            if (!result) return
+            const { field1: newName, field2: description } = result
+            if (newName === nameWithoutExt && description === currentDesc) return
+
+            const parentDir = node.path.substring(0, node.path.lastIndexOf('/'))
+            const newFullName = newName
+
+            // 同级同名校验（仅在名称变更时）
+            if (newName !== nameWithoutExt) {
+              const parentEntries = dirCache[parentDir] ?? (await loadDir(parentDir))
+              if (parentEntries.some((e) => e.name === newFullName && e.path !== node.path)) {
+                await showAlertDialog('提示', `"${newFullName}" 已存在`)
+                return
+              }
+              // 目录重命名暂不支持
+              await showAlertDialog('提示', '目录重命名暂不支持，仅允许修改描述')
+              return
+            }
+
+            // 名称未变，仅更新描述
+            if (currentBook) {
+              const newRelPath = `${parentDir.replace(`${rootPath}/`, '')}/${newFullName}/`
+              const newDescriptions = { ...currentBook.dirDescriptions }
+              delete newDescriptions[relPath]
+              if (description) {
+                newDescriptions[newRelPath] = description
+              }
+              const updatedBook = { ...currentBook, dirDescriptions: newDescriptions }
+              await updateBookMeta(updatedBook)
+            }
+            return
+          }
+
+          // 文件重命名
+          const newName = await showInputDialog('重命名', `请输入新名称:`, nameWithoutExt)
+          if (!newName || newName === nameWithoutExt) return
+          const parentDir = node.path.substring(0, node.path.lastIndexOf('/'))
+          const newFullName = `${newName}${ext}`
+          const newPath = `${parentDir}/${newFullName}`
+
+          // 同级同名校验
+          const parentEntries = dirCache[parentDir] ?? (await loadDir(parentDir))
+          if (parentEntries.some((e) => e.name === newFullName && e.path !== node.path)) {
+            await showAlertDialog('提示', `"${newFullName}" 已存在`)
+            return
+          }
+
+          // 检查未保存修改
+          const ms = useModelService.getState()
+          if (ms.isDirty(node.path)) {
+            await showAlertDialog('提示', '文件有未保存的修改，请先保存后再重命名')
+            return
+          }
+
+          const content = await fs.readFile(node.path)
+          await fs.writeFile(newPath, content)
+          await fs.remove(node.path)
+
+          // 关闭旧标签页，打开新文件
+          const tab = useEditorStore.getState().tabs.find((t) => t.filePath === node.path)
+          if (tab) {
+            useEditorStore.getState().forceCloseTab(tab.id)
+            openFile(newPath, newFullName, content)
+          }
+
+          await refreshDir(parentDir)
+          break
+        }
         case 'new_volume': {
-          const name = await showInputDialog('新增卷', '请输入卷名:', '卷名')
-          if (!name) return
+          const result = await showTwoFieldDialog({
+            title: '新增卷',
+            field1Label: '卷名',
+            field1Placeholder: '卷名',
+            field2Label: '卷描述（选填）',
+            field2Placeholder: '简要描述此卷的内容',
+          })
+          if (!result) return
+          const { field1: name, field2: description } = result
           const chaptersDir = node.path
           const entries = dirCache[chaptersDir] ?? (await loadDir(chaptersDir))
           const existingVolumes = entries.filter((e) => e.isDir && /^\d{2}_/.test(e.name))
@@ -324,8 +509,18 @@ export function FileExplorer() {
               ? Math.max(...existingVolumes.map((v) => Number.parseInt(v.name.substring(0, 2), 10)))
               : 0
           const nextNum = String(maxNum + 1).padStart(2, '0')
-          const volDir = `${chaptersDir}/${nextNum}_${name}`
+          const volDirName = `${nextNum}_${name}`
+          const volDir = `${chaptersDir}/${volDirName}`
           await fs.createDir(volDir)
+          // 写入描述到 book.json
+          if (description && currentBook) {
+            const relPath = `${chaptersDir.replace(`${rootPath}/`, '')}/${volDirName}/`
+            const updatedBook = {
+              ...currentBook,
+              dirDescriptions: { ...currentBook.dirDescriptions, [relPath]: description },
+            }
+            await updateBookMeta(updatedBook)
+          }
           await refreshDir(chaptersDir)
           break
         }
@@ -404,9 +599,14 @@ export function FileExplorer() {
       refreshDir,
       cleanupDeletedDir,
       showInputDialog,
+      showTwoFieldDialog,
       showConfirmDialog,
       showAlertDialog,
       getFs,
+      openFile,
+      currentBook,
+      updateBookMeta,
+      rootPath,
     ],
   )
 
@@ -428,7 +628,7 @@ export function FileExplorer() {
   }
 
   return (
-    <div className="file-explorer">
+    <div className="file-explorer" onContextMenu={handleBlankContextMenu}>
       {rootEntries.length === 0 ? (
         <div className="file-explorer-empty">目录为空</div>
       ) : (
@@ -466,6 +666,26 @@ export function FileExplorer() {
           setInputDialogOpen(false)
           inputResolveRef.current?.(null)
           inputResolveRef.current = null
+        }}
+      />
+      <TwoFieldDialog
+        open={twoFieldOpen}
+        title={twoFieldTitle}
+        field1Label={twoField1Label}
+        field1Placeholder={twoField1Placeholder}
+        field1Default={twoField1Default}
+        field2Label={twoField2Label}
+        field2Placeholder={twoField2Placeholder}
+        field2Default={twoField2Default}
+        onConfirm={(field1, field2) => {
+          setTwoFieldOpen(false)
+          twoFieldResolveRef.current?.({ field1, field2 })
+          twoFieldResolveRef.current = null
+        }}
+        onCancel={() => {
+          setTwoFieldOpen(false)
+          twoFieldResolveRef.current?.(null)
+          twoFieldResolveRef.current = null
         }}
       />
       <ConfirmDialog

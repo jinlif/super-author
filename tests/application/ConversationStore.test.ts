@@ -9,7 +9,7 @@ describe('ConversationStore', () => {
 
   beforeEach(() => {
     fs = new MockFileService()
-    store = new ConversationStore(fs)
+    store = new ConversationStore(fs, '/history')
   })
 
   it('应保存对话', async () => {
@@ -82,7 +82,6 @@ describe('ConversationStore', () => {
     await store.save('/book', conv)
     await store.delete('/book', 'conv-1')
     const loaded = await store.load('/book', 'conv-1')
-    // 删除后文件内容被清空，JSON.parse 会失败
     expect(loaded).toBeNull()
   })
 })

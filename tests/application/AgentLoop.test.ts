@@ -142,8 +142,12 @@ describe('AgentLoop', () => {
       events.push(event)
     }
 
-    // 应该有 done 事件
-    expect(events.some((e) => e.type === 'done')).toBe(true)
+    // 达到最大轮次应产生错误提示
+    const errorEvent = events.find((e) => e.type === 'error')
+    expect(errorEvent).toBeDefined()
+    if (errorEvent?.type === 'error') {
+      expect(errorEvent.message).toContain('最大对话轮次')
+    }
     // 最多 2 轮 turn_start
     const turnStarts = events.filter((e) => e.type === 'turn_start')
     expect(turnStarts.length).toBeLessThanOrEqual(2)

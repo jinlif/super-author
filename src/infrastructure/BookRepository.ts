@@ -1,6 +1,11 @@
 import type { Book, BookMeta, CreateBookInput } from '../domain/types/book'
 import type { IFileService } from './IFileService'
 
+/** 统一路径分隔符为正斜杠，去除末尾斜杠 */
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/\/+$/, '')
+}
+
 const DEFAULT_COMMANDS: Record<string, string> = {
   'continue.md': `---
 name: continue
@@ -37,13 +42,14 @@ export class BookRepository {
     const books: Book[] = []
     for (const entry of entries) {
       if (entry.isDir) {
-        const bookJsonPath = `${entry.path}/book.json`
+        const dirPath = normalizePath(entry.path)
+        const bookJsonPath = `${dirPath}/book.json`
         try {
           const content = await this.fs.readFile(bookJsonPath)
-          const book = this.parseBook(content, entry.path)
+          const book = this.parseBook(content, dirPath)
           books.push(book)
         } catch {
-          console.warn(`跳过没有 book.json 的目录: ${entry.path}`)
+          console.warn(`跳过没有 book.json 的目录: ${dirPath}`)
         }
       }
     }
@@ -65,12 +71,20 @@ export class BookRepository {
       await this.fs.writeFile(`${bookDir}/.super-author/commands/${name}`, content)
     }
 
+    // 自动生成 DESCRIPTION.md 和 AGENT.md
+    await this.fs.writeFile(`${bookDir}/DESCRIPTION.md`, `# ${input.title}\n\n`)
+    await this.fs.writeFile(`${bookDir}/AGENT.md`, '')
+
     const meta: BookMeta = {
       title: input.title,
       author: input.author,
-      description: input.description ?? '',
       tags: input.tags ?? [],
       style: input.style ?? '',
+      dirDescriptions: {
+        'chapters/': '存放章节正文',
+        'characters/': '角色设定卡',
+        'outline/': '大纲',
+      },
       createdAt: now,
       updatedAt: now,
     }
@@ -81,8 +95,9 @@ export class BookRepository {
   }
 
   async openBook(bookDir: string): Promise<Book> {
-    const content = await this.fs.readFile(`${bookDir}/book.json`)
-    return this.parseBook(content, bookDir)
+    const normalizedDir = normalizePath(bookDir)
+    const content = await this.fs.readFile(`${normalizedDir}/book.json`)
+    return this.parseBook(content, normalizedDir)
   }
 
   async updateBookMeta(book: Book): Promise<void> {

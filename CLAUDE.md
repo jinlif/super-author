@@ -6,18 +6,18 @@
 
 ## 技术栈
 
-| 层 | 选型 |
-|---|---|
-| 桌面壳 | Tauri v2（Rust 仅文件系统/窗口管理，不含业务逻辑） |
-| 前端框架 | React 19 + TypeScript 5 SPA（WebView 中运行） |
-| 编辑器 | Monaco Editor（Phase 2 集成） |
-| 构建 | Vite 6 |
-| 样式 | Tailwind CSS 3 + VS Code 暗色主题色板 |
-| 状态管理 | Zustand 5 |
-| AI SDK | `@anthropic-ai/sdk` + `openai`（Phase 3） |
-| MCP | `@modelcontextprotocol/sdk`（Phase 5） |
-| 测试 | Vitest 4 + React Testing Library |
-| Lint/Format | Biome 2 |
+| 层          | 选型                                               |
+| ----------- | -------------------------------------------------- |
+| 桌面壳      | Tauri v2（Rust 仅文件系统/窗口管理，不含业务逻辑） |
+| 前端框架    | React 19 + TypeScript 5 SPA（WebView 中运行）      |
+| 编辑器      | Monaco Editor（Phase 2 集成）                      |
+| 构建        | Vite 6                                             |
+| 样式        | Tailwind CSS 3 + VS Code 暗色主题色板              |
+| 状态管理    | Zustand 5                                          |
+| AI SDK      | `@anthropic-ai/sdk` + `openai`（Phase 3）          |
+| MCP         | `@modelcontextprotocol/sdk`（Phase 5）             |
+| 测试        | Vitest 4 + React Testing Library                   |
+| Lint/Format | Biome 2                                            |
 
 ## 架构
 
@@ -63,14 +63,14 @@ npm run format       # Biome 格式化
 
 ## 开发阶段
 
-| Phase | 目标 |
-|---|---|
-| Phase 1 ✅ | 项目骨架 + 四面板布局（已完成） |
-| Phase 2 | 数据模型 & 本地存储（Book/Chapter CRUD + Monaco Editor） |
-| Phase 3 | Agent 核心 + 多 Provider（Claude/OpenAI） |
-| Phase 4 | Skill 系统（续写/润色/大纲等内置 skill） |
-| Phase 5 | MCP 集成（Web Search 等第三方工具） |
-| Phase 6 | 高级功能（划词备注、角色可视化、写作目标、修订历史） |
+| Phase      | 目标                                                     |
+| ---------- | -------------------------------------------------------- |
+| Phase 1 ✅ | 项目骨架 + 四面板布局（已完成）                          |
+| Phase 2    | 数据模型 & 本地存储（Book/Chapter CRUD + Monaco Editor） |
+| Phase 3    | Agent 核心 + 多 Provider（Claude/OpenAI）                |
+| Phase 4    | Skill 系统（续写/润色/大纲等内置 skill）                 |
+| Phase 5    | MCP 集成（Web Search 等第三方工具）                      |
+| Phase 6    | 高级功能（划词备注、角色可视化、写作目标、修订历史）     |
 
 ## 设计参考
 
@@ -79,3 +79,66 @@ UI 设计规范见 [DESIGN.md](DESIGN.md)，详细设计文档见 [docs/superpow
 ## 外部 API 参考
 
 - [MiMo API 文档](docs/context/mimo-api.md) — 小米 MiMo 大模型 API（Anthropic/OpenAI 双格式），含 thinking 内容块回传要求
+
+## 完成任务时请严格遵守下述四原则
+
+### 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.

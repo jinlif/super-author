@@ -12,7 +12,9 @@ interface BookStore {
   currentBook: Book | null
   chapters: Chapter[]
   currentChapter: Chapter | null
+  bookDescription: string
   isLoading: boolean
+  fileExplorerRefreshKey: number
 
   _bookRepo: BookRepository
   _chapterRepo: ChapterRepository
@@ -28,6 +30,8 @@ interface BookStore {
   createChapter: (title: string, volume?: string) => Promise<void>
   loadChapter: (chapter: Chapter) => Promise<string>
   saveChapter: (content: string, chapter?: Chapter) => Promise<void>
+  updateBookMeta: (book: Book) => Promise<void>
+  refreshFileExplorer: () => void
 }
 
 function createRepos(fs?: IFileService) {
@@ -56,7 +60,9 @@ export const useBookStore = create<BookStore>((set, get) => {
     currentBook: null,
     chapters: [],
     currentChapter: null,
+    bookDescription: '',
     isLoading: false,
+    fileExplorerRefreshKey: 0,
 
     _bookRepo: bookRepo,
     _chapterRepo: chapterRepo,
@@ -94,10 +100,39 @@ export const useBookStore = create<BookStore>((set, get) => {
       set({ isLoading: true })
       const repo = get()._chapterRepo
       const chapters = await repo.listChapters(book.directory)
+
+      // 确保 dirDescriptions 有默认值
+      const defaultDirDescs: Record<string, string> = {
+        'chapters/': '存放章节正文',
+        'characters/': '角色设定卡',
+        'outline/': '大纲',
+      }
+      if (!book.dirDescriptions) {
+        book.dirDescriptions = { ...defaultDirDescs }
+      } else {
+        for (const [key, val] of Object.entries(defaultDirDescs)) {
+          if (!book.dirDescriptions[key]) {
+            book.dirDescriptions[key] = val
+          }
+        }
+      }
+
+      // 读取 DESCRIPTION.md
+      let bookDescription = ''
+      try {
+        const descPath = `${book.directory}/DESCRIPTION.md`
+        if (await get()._fs.exists(descPath)) {
+          bookDescription = await get()._fs.readFile(descPath)
+        }
+      } catch {
+        // DESCRIPTION.md 不存在或读取失败
+      }
+
       set({
         currentBook: book,
         chapters,
         currentChapter: null,
+        bookDescription,
         isLoading: false,
       })
     },
@@ -107,6 +142,7 @@ export const useBookStore = create<BookStore>((set, get) => {
         currentBook: null,
         chapters: [],
         currentChapter: null,
+        bookDescription: '',
       })
     },
 
@@ -136,6 +172,16 @@ export const useBookStore = create<BookStore>((set, get) => {
         currentChapter: updated,
         chapters: get().chapters.map((c) => (c.id === ch.id ? updated : c)),
       })
+    },
+
+    updateBookMeta: async (book: Book) => {
+      const repo = get()._bookRepo
+      await repo.updateBookMeta(book)
+      set({ currentBook: book })
+    },
+
+    refreshFileExplorer: () => {
+      set((state) => ({ fileExplorerRefreshKey: state.fileExplorerRefreshKey + 1 }))
     },
   }
 })

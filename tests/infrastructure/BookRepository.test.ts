@@ -32,6 +32,24 @@ describe('BookRepository', () => {
     expect(await fs.exists(`${book.directory}/characters`)).toBe(true)
   })
 
+  it('createBook 自动生成 DESCRIPTION.md 和 AGENT.md', async () => {
+    const book = await repo.createBook('/books', { title: 'Test', author: 'A' })
+    expect(await fs.exists(`${book.directory}/DESCRIPTION.md`)).toBe(true)
+    expect(await fs.exists(`${book.directory}/AGENT.md`)).toBe(true)
+    const desc = await fs.readFile(`${book.directory}/DESCRIPTION.md`)
+    expect(desc).toContain('Test')
+    const agentMd = await fs.readFile(`${book.directory}/AGENT.md`)
+    expect(agentMd).toBe('')
+  })
+
+  it('createBook 初始化默认 dirDescriptions', async () => {
+    const book = await repo.createBook('/books', { title: 'Test', author: 'A' })
+    expect(book.dirDescriptions).toBeDefined()
+    expect(book.dirDescriptions['chapters/']).toBe('存放章节正文')
+    expect(book.dirDescriptions['characters/']).toBe('角色设定卡')
+    expect(book.dirDescriptions['outline/']).toBe('大纲')
+  })
+
   it('listBooks 扫描目录下的书籍', async () => {
     await repo.createBook('/books', { title: 'Book1', author: 'A' })
     await repo.createBook('/books', { title: 'Book2', author: 'B' })
@@ -43,12 +61,12 @@ describe('BookRepository', () => {
     const created = await repo.createBook('/books', {
       title: 'Test',
       author: 'Author',
-      description: 'Desc',
       tags: ['玄幻'],
     })
     const opened = await repo.openBook(created.directory)
     expect(opened.title).toBe('Test')
     expect(opened.tags).toEqual(['玄幻'])
+    expect(opened.dirDescriptions).toBeDefined()
   })
 
   it('updateBookMeta 更新 book.json', async () => {

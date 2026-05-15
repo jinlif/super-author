@@ -156,10 +156,10 @@ describe('FileExplorer', () => {
       await user.click(screen.getByText('新增卷'))
 
       await waitFor(() => {
-        expect(screen.getByText('请输入卷名:')).toBeInTheDocument()
+        expect(screen.getByText('卷名')).toBeInTheDocument()
       })
-      const input = screen.getByRole('textbox')
-      await user.type(input, '黑暗森林')
+      const inputs = screen.getAllByRole('textbox')
+      await user.type(inputs[0], '黑暗森林')
       await user.click(screen.getByText('确定'))
 
       // 验证目录在文件系统上创建
@@ -188,10 +188,10 @@ describe('FileExplorer', () => {
       await user.click(screen.getByText('新增卷'))
 
       await waitFor(() => {
-        expect(screen.getByText('请输入卷名:')).toBeInTheDocument()
+        expect(screen.getByText('卷名')).toBeInTheDocument()
       })
-      const input = screen.getByRole('textbox')
-      await user.type(input, '星际迷航')
+      const inputs = screen.getAllByRole('textbox')
+      await user.type(inputs[0], '星际迷航')
       await user.click(screen.getByText('确定'))
 
       await waitFor(async () => {
@@ -374,11 +374,11 @@ describe('FileExplorer', () => {
       await user.click(screen.getByText('新建目录'))
 
       await waitFor(() => {
-        expect(screen.getByText('请输入目录名称:')).toBeInTheDocument()
+        expect(screen.getByText('目录名称')).toBeInTheDocument()
       })
-      const input = screen.getByRole('textbox')
-      await user.clear(input)
-      await user.type(input, '灵感')
+      const inputs = screen.getAllByRole('textbox')
+      await user.clear(inputs[0])
+      await user.type(inputs[0], '灵感')
       await user.click(screen.getByText('确定'))
 
       // 第一次创建「父目录/灵感」应成功（因为父目录下还没有灵感）
@@ -394,11 +394,11 @@ describe('FileExplorer', () => {
       await user.click(screen.getByText('新建目录'))
 
       await waitFor(() => {
-        expect(screen.getByText('请输入目录名称:')).toBeInTheDocument()
+        expect(screen.getByText('目录名称')).toBeInTheDocument()
       })
-      const input2 = screen.getByRole('textbox')
-      await user.clear(input2)
-      await user.type(input2, '灵感')
+      const inputs2 = screen.getAllByRole('textbox')
+      await user.clear(inputs2[0])
+      await user.type(inputs2[0], '灵感')
       await user.click(screen.getByText('确定'))
 
       // 应出现错误提示

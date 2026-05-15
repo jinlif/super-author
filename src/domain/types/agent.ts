@@ -63,7 +63,13 @@ export type AgentUIEvent =
   | { type: 'stream_chunk'; text: string }
   | { type: 'thinking_delta'; text: string }
   | { type: 'tool_executing'; toolId: string; toolName: string }
-  | { type: 'tool_complete'; toolId: string; toolName: string; result: string }
+  | {
+      type: 'tool_complete'
+      toolId: string
+      toolName: string
+      input: Record<string, unknown>
+      result: string
+    }
   | { type: 'turn_start'; turn: number }
   | { type: 'done' }
   | { type: 'error'; message: string }
@@ -87,4 +93,12 @@ export interface ConversationSummary {
   title: string
   createdAt: string
   updatedAt: string
+}
+
+// SubAgent 输入
+
+export interface SubAgentInput {
+  prompt: string
+  model?: string
+  maxTurns?: number
 }

@@ -6,6 +6,7 @@ export type ContextMenuAction =
   | 'new_dir'
   | 'new_file'
   | 'delete'
+  | 'rename'
   | 'new_volume'
   | 'new_chapter'
   | 'delete_volume'
@@ -15,6 +16,17 @@ export interface ContextMenuState {
   y: number
   node: FileEntry
   parentName: string
+  isRoot?: boolean
+}
+
+/** 受保护的目录名（不可删除/重命名，但可在其中创建内容） */
+const PROTECTED_DIR_NAMES = ['commands', 'skills']
+
+/** 检查是否为 .super-author 下的受保护目录 */
+function isProtectedDir(node: FileEntry): boolean {
+  if (!node.isDir) return false
+  const normalized = node.path.replace(/\\/g, '/')
+  return normalized.includes('.super-author/') && PROTECTED_DIR_NAMES.includes(node.name)
 }
 
 interface ContextMenuProps {
@@ -29,8 +41,22 @@ interface MenuItem {
 }
 
 /** 根据节点类型获取可用的操作列表 */
-function getNodeActions(node: FileEntry, parentName: string): MenuItem[] {
-  if (node.name === 'book.json' || node.name === '.super-author') return []
+function getNodeActions(node: FileEntry, parentName: string, isRoot?: boolean): MenuItem[] {
+  // 根节点（空白区域点击）只显示新建选项
+  if (isRoot) {
+    return [
+      { action: 'new_dir', label: '新建目录' },
+      { action: 'new_file', label: '新建 .md 文件' },
+    ]
+  }
+
+  // 不可删除/重命名的项：book.json、.super-author 目录、.super-author 下的受保护目录
+  if (node.name === 'book.json' || node.name === '.super-author' || isProtectedDir(node)) {
+    return [
+      { action: 'new_dir', label: '新建目录' },
+      { action: 'new_file', label: '新建 .md 文件' },
+    ]
+  }
 
   if (node.isDir) {
     if (node.name === 'chapters') {
@@ -54,21 +80,21 @@ function getNodeActions(node: FileEntry, parentName: string): MenuItem[] {
     return [
       { action: 'new_dir', label: '新建目录' },
       { action: 'new_file', label: '新建 .md 文件' },
+      { action: 'rename', label: '重命名' },
       { action: 'delete', label: '删除' },
     ]
   }
 
-  if (node.name.endsWith('.md')) {
-    return [{ action: 'delete', label: '删除' }]
-  }
-
-  return []
+  return [
+    { action: 'rename', label: '重命名' },
+    { action: 'delete', label: '删除' },
+  ]
 }
 
 export function ContextMenu({ state, onAction, onClose }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
-  const { node, parentName } = state
-  const items = getNodeActions(node, parentName)
+  const { node, parentName, isRoot } = state
+  const items = getNodeActions(node, parentName, isRoot)
 
   useEffect(() => {
     if (menuRef.current) {

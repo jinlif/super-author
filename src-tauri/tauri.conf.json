@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "超级作者",
-        "width": 1400,
-        "height": 900,
+        "width": 1200,
+        "height": 680,
         "minWidth": 900,
         "minHeight": 600,
         "resizable": true

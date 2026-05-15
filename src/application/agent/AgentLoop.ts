@@ -1,18 +1,20 @@
 import type { AgentMessage, AgentUIEvent } from '../../domain/types/agent'
+import type { BookMeta } from '../../domain/types/book'
 import type { ToolContext } from '../../domain/types/tool'
 import type { IProvider } from '../../infrastructure/providers/IProvider'
-import type { WritingContext } from './SystemPrompt'
 import { SystemPrompt } from './SystemPrompt'
 import { ToolExecutor } from './ToolExecutor'
 import type { ToolRegistry } from './ToolRegistry'
 
-const DEFAULT_MAX_TURNS = 10
+const DEFAULT_MAX_TURNS = 30
 
 export interface AgentLoopOptions {
   provider: IProvider
   registry: ToolRegistry
   toolContext: ToolContext
-  systemContext?: WritingContext
+  bookMeta?: BookMeta | null
+  dirDescriptions?: Record<string, string>
+  description?: string
   signal?: AbortSignal
   maxTurns?: number
 }
@@ -26,13 +28,21 @@ export class AgentLoop {
       provider,
       registry,
       toolContext,
-      systemContext,
+      bookMeta,
+      dirDescriptions,
+      description,
       signal,
       maxTurns = DEFAULT_MAX_TURNS,
     } = options
 
     const executor = new ToolExecutor(registry)
-    const systemPrompt = SystemPrompt.build(registry.list(), systemContext)
+    const systemPrompt = SystemPrompt.build(
+      registry.list(),
+      bookMeta ?? null,
+      dirDescriptions ?? {},
+      description,
+      toolContext.bookDir,
+    )
     let currentMessages = [...messages]
 
     for (let turn = 0; turn < maxTurns; turn++) {
@@ -136,10 +146,12 @@ export class AgentLoop {
       const toolResults = await executor.executeAll(toolCalls, toolContext)
 
       for (const tr of toolResults) {
+        const matchedCall = toolCalls.find((tc) => tc.id === tr.id)
         yield {
           type: 'tool_complete',
           toolId: tr.id,
-          toolName: toolCalls.find((tc) => tc.id === tr.id)?.name ?? '',
+          toolName: matchedCall?.name ?? '',
+          input: matchedCall?.input ?? {},
           result: tr.result.content,
         }
       }
@@ -155,6 +167,9 @@ export class AgentLoop {
     }
 
     // 达到最大轮次
-    yield { type: 'done' }
+    yield {
+      type: 'error',
+      message: `已达到最大对话轮次（${maxTurns}轮），Agent 已停止。如需继续，请发送新消息。`,
+    }
   }
 }

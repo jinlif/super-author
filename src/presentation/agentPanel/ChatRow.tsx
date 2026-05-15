@@ -11,7 +11,7 @@ interface ChatRowProps {
 }
 
 // 匹配 agentStore 写入的工具结果文本：[工具 xxx 执行完成: ...] 或 [工具 xxx 执行失败: ...]
-const TOOL_RESULT_RE = /^\n*\[工具 (.+?) 执行(完成|失败): ([\s\S]*?)\]\s*$/
+const TOOL_RESULT_RE = /^\n*\[工具 (.+?) 执行(完成|失败):\s*([\s\S]*?)\]\s*$/
 
 type ContentGroup =
   | { kind: 'text'; text: string }
@@ -185,8 +185,8 @@ function ToolCallBlock({
         <span>🔧</span>
         <span className="tool-call-name">{name}</span>
         {result && !expanded && (
-          <span className="tool-call-preview">
-            {result.length > 60 ? `${result.slice(0, 60)}...` : result}
+          <span className={`tool-call-status ${isError ? 'error' : ''}`}>
+            {isError ? '✗' : '✓'}
           </span>
         )}
       </button>

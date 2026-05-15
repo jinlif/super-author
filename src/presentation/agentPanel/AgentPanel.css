@@ -286,13 +286,14 @@
   flex-shrink: 0;
 }
 
-.tool-call-preview {
-  color: #5a5a5a;
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+.tool-call-status {
+  color: #4ec9b0;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tool-call-status.error {
+  color: #f48771;
 }
 
 .tool-call-detail {
@@ -312,6 +313,23 @@
   word-break: break-all;
   max-height: 200px;
   overflow-y: auto;
+}
+
+.tool-call-input::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tool-call-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tool-call-input::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.tool-call-input::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .tool-call-result {

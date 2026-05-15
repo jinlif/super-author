@@ -8,6 +8,9 @@ interface ModelServiceState {
   pendingCloseUri: string | null
   pendingCloseFileName: string
 
+  // 外部更新监听器（用于同步 Monaco Editor）
+  _externalUpdateListeners: ((uri: string, value: string) => void)[]
+
   getOrCreate: (uri: string, fileName: string, initialContent: string) => TextModel
   release: (uri: string) => void
   updateValue: (uri: string, value: string) => void
@@ -15,6 +18,7 @@ interface ModelServiceState {
   isDirty: (uri: string) => boolean
   setPendingClose: (uri: string, fileName: string) => void
   clearPendingClose: () => void
+  onExternalUpdate: (listener: (uri: string, value: string) => void) => () => void
 }
 
 export const useModelService = create<ModelServiceState>((set, get) => ({
@@ -22,6 +26,7 @@ export const useModelService = create<ModelServiceState>((set, get) => ({
   refCount: {},
   pendingCloseUri: null,
   pendingCloseFileName: '',
+  _externalUpdateListeners: [],
 
   getOrCreate: (uri, _fileName, initialContent) => {
     const state = get()
@@ -65,6 +70,10 @@ export const useModelService = create<ModelServiceState>((set, get) => ({
         [uri]: { ...model, value, versionId: model.versionId + 1 },
       },
     })
+    // 通知外部监听器（如 Monaco Editor）同步更新
+    for (const listener of get()._externalUpdateListeners) {
+      listener(uri, value)
+    }
   },
 
   markClean: (uri) => {
@@ -87,4 +96,14 @@ export const useModelService = create<ModelServiceState>((set, get) => ({
   setPendingClose: (uri, fileName) => set({ pendingCloseUri: uri, pendingCloseFileName: fileName }),
 
   clearPendingClose: () => set({ pendingCloseUri: null, pendingCloseFileName: '' }),
+
+  onExternalUpdate: (listener) => {
+    set((s) => ({ _externalUpdateListeners: [...s._externalUpdateListeners, listener] }))
+    // 返回取消订阅函数
+    return () => {
+      set((s) => ({
+        _externalUpdateListeners: s._externalUpdateListeners.filter((l) => l !== listener),
+      }))
+    }
+  },
 }))

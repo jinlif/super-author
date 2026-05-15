@@ -1,114 +1,208 @@
-import { SendHorizonal, Square } from 'lucide-react'
-import { type KeyboardEvent, useCallback, useRef, useState } from 'react'
-import TextareaAutosize from 'react-textarea-autosize'
-import { useModelService } from '../../application/services/ModelService'
-import { useAgentStore } from '../../application/stores/agentStore'
-import { useEditorStore } from '../../application/stores/editorStore'
-import type { Command } from '../../domain/types/command'
-import { CommandSuggestions } from './CommandSuggestions'
-import { ModelPickerModal } from './ModelPickerModal'
+import { SendHorizonal, Square } from "lucide-react";
+import { type KeyboardEvent, useCallback, useRef, useState } from "react";
+import TextareaAutosize from "react-textarea-autosize";
+import { FileMentionService } from "../../application/services/FileMentionService";
+import type { FileMentionItem } from "../../application/services/FileMentionService";
+import { useModelService } from "../../application/services/ModelService";
+import { useAgentStore } from "../../application/stores/agentStore";
+import { useEditorStore } from "../../application/stores/editorStore";
+import type { Command } from "../../domain/types/command";
+import type { SelectedMention } from "../../domain/types/fileMention";
+import { CommandSuggestions } from "./CommandSuggestions";
+import { FileMentions } from "./FileMentions";
+import { ModelPickerModal } from "./ModelPickerModal";
 
 // 检测命令模式：行首 `/` 或空格后 `/`
 function detectCommand(text: string): { active: boolean; query: string } {
   // 匹配：整行以 / 开头，或空格后跟 /
-  const match = text.match(/(^|\s)\/(\w*)$/)
+  const match = text.match(/(^|\s)\/(\w*)$/);
   if (match) {
-    return { active: true, query: match[2] }
+    return { active: true, query: match[2] };
   }
-  return { active: false, query: '' }
+  return { active: false, query: "" };
+}
+
+// 检测文件提及模式：行首 `@` 或空格后 `@`
+function detectMention(
+  text: string,
+  cursorPos: number,
+): { active: boolean; query: string; startPos: number } {
+  // 获取光标前的文本
+  const beforeCursor = text.substring(0, cursorPos);
+  // 匹配：行首 @ 或空格后跟 @，后面跟着非空白字符
+  const match = beforeCursor.match(/(^|\s)@([^\s@]*)$/);
+  if (match) {
+    const fullMatch = match[0];
+    const queryPart = match[2] || "";
+    const startPos = cursorPos - fullMatch.length;
+    return { active: true, query: queryPart, startPos };
+  }
+  return { active: false, query: "", startPos: 0 };
 }
 
 export function AgentInput() {
-  const [input, setInput] = useState('')
-  const [cmdActive, setCmdActive] = useState(false)
-  const [cmdQuery, setCmdQuery] = useState('')
-  const [showModelPicker, setShowModelPicker] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [input, setInput] = useState("");
+  const [cmdActive, setCmdActive] = useState(false);
+  const [cmdQuery, setCmdQuery] = useState("");
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [mentionActive, setMentionActive] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStartPos, setMentionStartPos] = useState(0);
+  const [selectedMentions, setSelectedMentions] = useState<SelectedMention[]>(
+    [],
+  );
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isStreaming = useAgentStore((s) => s.isStreaming)
-  const sendMessage = useAgentStore((s) => s.sendMessage)
-  const abortStreaming = useAgentStore((s) => s.abortStreaming)
-  const tempChapterData = useAgentStore((s) => s.tempChapterData)
-  const setTempChapterData = useAgentStore((s) => s.setTempChapterData)
-  const commandRegistry = useAgentStore((s) => s.commandRegistry)
-  const clearConversation = useAgentStore((s) => s.clearConversation)
+  const isStreaming = useAgentStore((s) => s.isStreaming);
+  const sendMessage = useAgentStore((s) => s.sendMessage);
+  const abortStreaming = useAgentStore((s) => s.abortStreaming);
+  const tempChapterData = useAgentStore((s) => s.tempChapterData);
+  const setTempChapterData = useAgentStore((s) => s.setTempChapterData);
+  const commandRegistry = useAgentStore((s) => s.commandRegistry);
+  const clearConversation = useAgentStore((s) => s.clearConversation);
 
-  const activeTabId = useEditorStore((s) => s.activeTabId)
-  const tabs = useEditorStore((s) => s.tabs)
+  const activeTabId = useEditorStore((s) => s.activeTabId);
+  const tabs = useEditorStore((s) => s.tabs);
 
   const getCurrentChapterContent = useCallback(() => {
-    if (!activeTabId) return undefined
-    const activeTab = tabs.find((t) => t.id === activeTabId)
-    if (!activeTab) return undefined
-    const model = useModelService.getState().models[activeTab.filePath]
-    return model?.value
-  }, [activeTabId, tabs])
+    if (!activeTabId) return undefined;
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    if (!activeTab) return undefined;
+    const model = useModelService.getState().models[activeTab.filePath];
+    return model?.value;
+  }, [activeTabId, tabs]);
 
-  const handleSend = useCallback(() => {
-    const text = input.trim()
-    if (!text || isStreaming) return
-    setInput('')
-    setCmdActive(false)
-    const chapterContent = getCurrentChapterContent()
-    sendMessage(text, chapterContent)
-  }, [input, isStreaming, sendMessage, getCurrentChapterContent])
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || isStreaming) return;
+    setInput("");
+    setCmdActive(false);
+    setMentionActive(false);
+
+    // 读取引用文件内容
+    const mentionContents: string[] = [];
+    for (const mention of selectedMentions) {
+      const content = await FileMentionService.readFileContent(
+        mention.item.filePath,
+      );
+      if (content) {
+        mentionContents.push(
+          `## ${mention.item.title}\n路径: ${mention.item.filePath}\n\n${content}`,
+        );
+      }
+    }
+    setSelectedMentions([]);
+
+    const chapterContent = getCurrentChapterContent();
+    sendMessage(text, chapterContent, mentionContents);
+  }, [
+    input,
+    isStreaming,
+    sendMessage,
+    getCurrentChapterContent,
+    selectedMentions,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey && !cmdActive) {
-        e.preventDefault()
-        handleSend()
+      if (e.key === "Enter" && !e.shiftKey && !cmdActive && !mentionActive) {
+        e.preventDefault();
+        handleSend();
       }
     },
-    [handleSend, cmdActive],
-  )
+    [handleSend, cmdActive, mentionActive],
+  );
 
   const handleInput = useCallback((value: string) => {
-    setInput(value)
+    setInput(value);
     // 命令检测
-    const { active, query } = detectCommand(value)
-    setCmdActive(active)
-    setCmdQuery(query)
-  }, [])
+    const { active, query } = detectCommand(value);
+    setCmdActive(active);
+    setCmdQuery(query);
+
+    // 文件提及检测
+    if (textareaRef.current) {
+      const cursorPos = textareaRef.current.selectionStart;
+      const mentionResult = detectMention(value, cursorPos);
+      setMentionActive(mentionResult.active);
+      setMentionQuery(mentionResult.query);
+      setMentionStartPos(mentionResult.startPos);
+    }
+  }, []);
 
   const handleCommandSelect = useCallback(
     (command: Command) => {
-      setCmdActive(false)
-      if (command.action === 'modal') {
-        if (command.modalName === 'ModelPicker') {
-          setShowModelPicker(true)
+      setCmdActive(false);
+      if (command.action === "modal") {
+        if (command.modalName === "ModelPicker") {
+          setShowModelPicker(true);
         }
         // 清除输入中的 /xxx
-        setInput('')
-      } else if (command.action === 'execute') {
-        if (command.name === 'new') {
-          clearConversation()
+        setInput("");
+      } else if (command.action === "execute") {
+        if (command.name === "new") {
+          clearConversation();
         }
-        setInput('')
-      } else if (command.action === 'fill' && command.prompt) {
+        setInput("");
+      } else if (command.action === "fill" && command.prompt) {
         // 替换 /command 为 prompt 模板
-        const prompt = command.prompt
-        const cursorIdx = prompt.indexOf('{cursor}')
-        const cleanPrompt = prompt.replace('{cursor}', '')
-        setInput(cleanPrompt)
+        const prompt = command.prompt;
+        const cursorIdx = prompt.indexOf("{cursor}");
+        const cleanPrompt = prompt.replace("{cursor}", "");
+        setInput(cleanPrompt);
         // 设置光标位置
         setTimeout(() => {
           if (textareaRef.current) {
-            const pos = cursorIdx >= 0 ? cursorIdx : cleanPrompt.length
-            textareaRef.current.setSelectionRange(pos, pos)
-            textareaRef.current.focus()
+            const pos = cursorIdx >= 0 ? cursorIdx : cleanPrompt.length;
+            textareaRef.current.setSelectionRange(pos, pos);
+            textareaRef.current.focus();
           }
-        }, 0)
+        }, 0);
       }
     },
     [clearConversation],
-  )
+  );
 
   const handleCommandClose = useCallback(() => {
-    setCmdActive(false)
-  }, [])
+    setCmdActive(false);
+  }, []);
 
-  const allCommands = commandRegistry.getAll()
+  const handleMentionSelect = useCallback(
+    (item: FileMentionItem) => {
+      setMentionActive(false);
+
+      // 替换输入框中的 @xxx 为 @文件名
+      const mentionText = `@${item.title}`;
+      const cursorPos = textareaRef.current?.selectionStart ?? input.length;
+      const beforeMention = input.substring(0, mentionStartPos);
+      const afterCursor = input.substring(cursorPos);
+      const newInput = `${beforeMention}${mentionText} ${afterCursor}`;
+      setInput(newInput);
+
+      // 添加到已选列表
+      setSelectedMentions((prev) => {
+        // 避免重复选择
+        if (prev.some((m) => m.item.filePath === item.filePath)) return prev;
+        return [...prev, { item, displayText: mentionText }];
+      });
+
+      // 定位光标
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newPos = beforeMention.length + mentionText.length + 1;
+          textareaRef.current.setSelectionRange(newPos, newPos);
+          textareaRef.current.focus();
+        }
+      }, 0);
+    },
+    [input, mentionStartPos],
+  );
+
+  const handleMentionClose = useCallback(() => {
+    setMentionActive(false);
+  }, []);
+
+  const allCommands = commandRegistry.getAll();
 
   return (
     <div className="agent-input-area">
@@ -121,7 +215,9 @@ export function AgentInput() {
           <button
             type="button"
             className="review-btn"
-            onClick={() => setInput(`请修改以下内容:\n\n${tempChapterData.content}`)}
+            onClick={() =>
+              setInput(`请修改以下内容:\n\n${tempChapterData.content}`)
+            }
           >
             修改
           </button>
@@ -132,14 +228,14 @@ export function AgentInput() {
           >
             放弃
           </button>
-          <span style={{ fontSize: 11, color: '#858585', marginLeft: 8 }}>
+          <span style={{ fontSize: 11, color: "#858585", marginLeft: 8 }}>
             AI 生成 - 待审阅: {tempChapterData.title}
           </span>
         </div>
       )}
 
       {/* Input row */}
-      <div className="agent-input-row" style={{ position: 'relative' }}>
+      <div className="agent-input-row" style={{ position: "relative" }}>
         <CommandSuggestions
           commands={allCommands}
           query={cmdQuery}
@@ -147,10 +243,41 @@ export function AgentInput() {
           onSelect={handleCommandSelect}
           onClose={handleCommandClose}
         />
+        <FileMentions
+          query={mentionQuery}
+          visible={mentionActive}
+          onSelect={handleMentionSelect}
+          onClose={handleMentionClose}
+        />
+        {/* Mention chips */}
+        {selectedMentions.length > 0 && (
+          <div className="mention-chips">
+            {selectedMentions.map((m, idx) => (
+              <span
+                key={m.item.filePath}
+                className="mention-chip"
+                title={m.item.filePath}
+              >
+                {m.displayText}
+                <button
+                  type="button"
+                  className="mention-chip-remove"
+                  onClick={() =>
+                    setSelectedMentions((prev) =>
+                      prev.filter((_, i) => i !== idx),
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         <TextareaAutosize
           ref={textareaRef}
           className="agent-input"
-          placeholder="输入写作指令... (输入 / 触发命令)"
+          placeholder="输入写作指令... (输入 / 触发命令，输入 @ 引用文件)"
           minRows={2}
           maxRows={15}
           value={input}
@@ -159,7 +286,12 @@ export function AgentInput() {
           disabled={isStreaming}
         />
         {isStreaming ? (
-          <button type="button" className="agent-abort-btn" onClick={abortStreaming} title="中止">
+          <button
+            type="button"
+            className="agent-abort-btn"
+            onClick={abortStreaming}
+            title="中止"
+          >
             <Square size={14} />
           </button>
         ) : (
@@ -176,7 +308,10 @@ export function AgentInput() {
       </div>
 
       {/* Model picker modal */}
-      <ModelPickerModal visible={showModelPicker} onClose={() => setShowModelPicker(false)} />
+      <ModelPickerModal
+        visible={showModelPicker}
+        onClose={() => setShowModelPicker(false)}
+      />
     </div>
-  )
+  );
 }

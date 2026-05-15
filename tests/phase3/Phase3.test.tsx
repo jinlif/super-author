@@ -5,8 +5,8 @@ import { useBookStore } from '../../src/application/stores/bookStore'
 import { useEditorStore } from '../../src/application/stores/editorStore'
 import type { ToolContext } from '../../src/domain/types/tool'
 import { MockFileService } from '../../src/infrastructure/MockFileService'
-import { readChapterTool } from '../../src/infrastructure/tools/ReadChapterTool'
-import { writeChapterTool } from '../../src/infrastructure/tools/WriteChapterTool'
+import { readFileTool } from '../../src/infrastructure/tools/ReadFileTool'
+import { writeFileTool } from '../../src/infrastructure/tools/WriteFileTool'
 
 describe('Phase 3 集成测试', () => {
   let fs: MockFileService
@@ -18,6 +18,7 @@ describe('Phase 3 集成测试', () => {
       currentBook: null,
       chapters: [],
       currentChapter: null,
+      bookDescription: '',
       isLoading: false,
     })
 
@@ -59,9 +60,12 @@ describe('Phase 3 集成测试', () => {
       JSON.stringify({
         title: '测试小说',
         author: '作者',
-        description: '测试用',
         tags: [],
         style: '玄幻',
+        dirDescriptions: {
+          'chapters/': '存放章节正文',
+          'characters/': '角色设定卡',
+        },
         createdAt: '2025-01-01T00:00:00Z',
         updatedAt: '2025-01-01T00:00:00Z',
       }),
@@ -109,8 +113,8 @@ describe('Phase 3 集成测试', () => {
 
     // 4. 设置 ToolRegistry
     const registry = new ToolRegistry()
-    registry.register(readChapterTool)
-    registry.register(writeChapterTool)
+    registry.register(readFileTool)
+    registry.register(writeFileTool)
 
     const toolContext: ToolContext = {
       fileService: fs,
@@ -124,40 +128,32 @@ describe('Phase 3 集成测试', () => {
     expect(useAgentStore.getState().messages).toHaveLength(0)
     expect(useAgentStore.getState().isStreaming).toBe(false)
 
-    // 6. 由于实际 AI 调用需要 API Key，这里直接测试 tool 功能
-    // 测试 read_chapter
+    // 6. 测试 read_file
     const readResult = await registry
-      .get('read_chapter')
+      .get('read_file')
       ?.handler({ filePath: '/books/测试小说/chapters/01-第一章.md' }, toolContext)
     expect(readResult.content).toContain('张三')
     expect(readResult.content).toContain('修仙者')
 
-    // 7. 测试 write_chapter（写入已有章节）
-    const writeResult = await registry.get('write_chapter')?.handler(
+    // 7. 测试 write_file
+    const writeResult = await registry.get('write_file')?.handler(
       {
         filePath: '/books/测试小说/chapters/01-第一章.md',
         content: '# 第一章\n\n张三正在山上修炼，突然天边传来一声巨响。',
       },
       toolContext,
     )
-    expect(writeResult.content).toContain('已更新')
+    expect(writeResult.content).toContain('已写入')
 
     // 验证文件已更新
     const updatedContent = await fs.readFile('/books/测试小说/chapters/01-第一章.md')
     expect(updatedContent).toContain('天边传来一声巨响')
 
-    // 8. 测试 write_chapter（创建临时章节）
-    const tempResult = await registry
-      .get('write_chapter')
-      ?.handler({ title: '续写片段', content: '这是AI生成的续写内容' }, toolContext)
-    expect(tempResult.structuredContent?.isTemporary).toBe(true)
-    expect(tempResult.structuredContent?.content).toBe('这是AI生成的续写内容')
-
-    // 9. 测试 Provider 配置持久化
+    // 8. 测试 Provider 配置持久化
     useAgentStore.getState().setProviderConfig({ model: 'claude-opus-4-7' })
     expect(useAgentStore.getState().providerConfig.model).toBe('claude-opus-4-7')
 
-    // 10. 测试工具并发/串行执行
+    // 9. 测试工具并发/串行执行
     const { ToolExecutor } = await import('../../src/application/agent/ToolExecutor')
     const executor = new ToolExecutor(registry)
 
@@ -166,7 +162,7 @@ describe('Phase 3 集成测试', () => {
       [
         {
           id: 't1',
-          name: 'read_chapter',
+          name: 'read_file',
           input: { filePath: '/books/测试小说/chapters/01-第一章.md' },
         },
       ],

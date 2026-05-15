@@ -1,13 +1,14 @@
+import type { BookMeta } from '../../domain/types/book'
 import type { ToolDef } from '../../domain/types/tool'
 
-export interface WritingContext {
-  currentChapter?: string
-  characters?: string
-  outline?: string
-}
-
 export class SystemPrompt {
-  static build(tools: ToolDef[], context?: WritingContext): string {
+  static build(
+    tools: ToolDef[],
+    bookMeta: BookMeta | null,
+    dirDescriptions: Record<string, string>,
+    description?: string,
+    bookDir?: string,
+  ): string {
     const toolDescriptions = tools
       .map((t) => `  - ${t.name}: ${t.description}（${t.isReadOnly ? '只读' : '写入'}）`)
       .join('\n')
@@ -32,9 +33,13 @@ ${toolDescriptions}
 
 使用工具时请遵循：
 1. 先阅读相关章节了解当前剧情和文风
-2. 需要获取角色信息时使用 get_characters
-3. 创作前先 check 大纲 (read_outline)
-4. 完成内容后写入章节 (write_chapter)
+2. 需要角色信息时读取 characters/ 目录下的文件
+3. 创作前先查看大纲（outline/ 目录）
+4. 完成内容后使用写入工具保存
+
+## 章节摘要
+
+章节摘要存储在 \`.super-author/books/<bookname>/chapter-summaries.json\`，格式为 {chapterId: summary}。你可以通过 ReadFileTool 和 WriteFileTool 读写摘要。
 
 ## 写作规范
 
@@ -53,26 +58,60 @@ ${toolDescriptions}
 4. 生成的内容应自然融入已有章节`,
     ]
 
-    if (context) {
-      const ctxParts: string[] = []
+    // 书籍信息
+    if (bookMeta) {
+      const bookParts: string[] = []
+      bookParts.push(`## 当前书籍
 
-      if (context.currentChapter) {
-        ctxParts.push(`## 当前章节内容\n\n${context.currentChapter}`)
+- 书名：${bookMeta.title}`)
+      if (bookDir) {
+        bookParts.push(`- 当前书籍根目录: ${bookDir}
+- 请使用相对于此目录的路径（如 \`chapters/第一章.md\`），工具会自动解析`)
       }
+      if (description) {
+        bookParts.push(`- 简介：${description}`)
+      }
+      if (bookMeta.tags.length > 0) {
+        bookParts.push(`- 标签：${bookMeta.tags.join('、')}`)
+      }
+      if (bookMeta.style) {
+        bookParts.push(`- 风格：${bookMeta.style}`)
+      }
+      parts.push(bookParts.join('\n'))
+    }
 
-      if (context.characters) {
-        ctxParts.push(`## 角色信息\n\n${context.characters}`)
-      }
+    // 目录描述
+    const dirEntries = Object.entries(dirDescriptions)
+    if (dirEntries.length > 0) {
+      const dirLines = dirEntries.map(([dir, desc]) => `  - ${dir}: ${desc}`).join('\n')
+      parts.push(`## 书籍目录结构
 
-      if (context.outline) {
-        ctxParts.push(`## 大纲信息\n\n${context.outline}`)
-      }
-
-      if (ctxParts.length > 0) {
-        parts.push(`## 写作上下文\n\n${ctxParts.join('\n\n')}`)
-      }
+${dirLines}`)
     }
 
     return parts.join('\n\n')
+  }
+
+  static buildForSubAgent(tools: ToolDef[]): string {
+    const toolDescriptions = tools
+      .map((t) => `  - ${t.name}: ${t.description}（${t.isReadOnly ? '只读' : '写入'}）`)
+      .join('\n')
+
+    return `# 角色定义
+
+你是一个通用写作助手，负责执行分配给你的子任务。
+
+## 工具使用指南
+
+你可以使用以下工具：
+
+${toolDescriptions}
+
+## 工作规范
+
+1. 专注于完成分配给你的任务
+2. 使用工具获取所需信息
+3. 返回清晰、简洁的结果
+4. 如果遇到问题，明确说明原因`
   }
 }
