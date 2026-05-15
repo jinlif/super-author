@@ -22,3 +22,7 @@ Thumbs.db
 .claude/settings.local.json
 
 src-tauri/target
+
+.playwright-mcp
+
+.vscode
