@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"默认权限集","remote":{"urls":["https://*"]},"local":true,"windows":["main"],"permissions":["core:default","dialog:default","http:default"]}}
+{"default":{"identifier":"default","description":"默认权限集","remote":{"urls":["https://*"]},"local":true,"windows":["main"],"permissions":["core:default","dialog:default",{"identifier":"http:default","allow":[{"url":"https://coding.dashscope.aliyuncs.com/**"},{"url":"https://api.anthropic.com/**"}]}]}}
