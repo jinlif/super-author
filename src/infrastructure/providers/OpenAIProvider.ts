@@ -6,7 +6,7 @@ import type {
   ToolResultContentBlock,
 } from "../../domain/types/agent";
 import type { IProvider } from "./IProvider";
-import { tauriFetch } from "./tauriFetch";
+import { createTauriFetch } from "./tauriFetch";
 
 type OpenAIMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
@@ -127,7 +127,7 @@ export class OpenAIProvider implements IProvider {
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
       dangerouslyAllowBrowser: true,
-      fetch: tauriFetch,
+      fetch: createTauriFetch(config.apiKey),
     });
   }
 
