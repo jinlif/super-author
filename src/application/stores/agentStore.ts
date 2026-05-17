@@ -18,6 +18,8 @@ import { renameEntryTool } from '../../infrastructure/tools/RenameEntryTool'
 import { replaceFileTool } from '../../infrastructure/tools/ReplaceFileTool'
 import { createSubAgentTool } from '../../infrastructure/tools/SubAgentTool'
 import { writeFileTool } from '../../infrastructure/tools/WriteFileTool'
+import { approvalTool } from '../../infrastructure/tools/ApprovalTool'
+import { askQuestionTool } from '../../infrastructure/tools/AskQuestionTool'
 import { AgentLoop } from '../agent/AgentLoop'
 import { CommandRegistry } from '../agent/CommandRegistry'
 import { ConversationStore } from '../agent/ConversationStore'
@@ -36,6 +38,11 @@ interface AgentStore {
   providerConfig: ProviderConfig
   tempChapterData: { title: string; content: string } | null
   conversationHistory: ConversationSummary[]
+  pendingTool: {
+    name: string
+    input: Record<string, unknown>
+    resolve: (result: Record<string, unknown>) => void
+  } | null
   _conversationCache: Record<string, AgentMessage[]>
 
   // Dependencies (injected)
@@ -61,6 +68,7 @@ interface AgentStore {
     mentionContents?: string[],
   ) => Promise<void>
   abortStreaming: () => void
+  resolvePending: (result: Record<string, unknown>) => void
   clearConversation: () => void
   setProviderConfig: (config: Partial<ProviderConfig>) => void
   loadConversation: (
@@ -92,6 +100,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   providerConfig: defaultProviderConfig,
   tempChapterData: null,
   conversationHistory: [],
+  pendingTool: null,
   _conversationCache: {},
 
   _registry: null,
@@ -172,6 +181,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     registry.register(writeFileTool)
     registry.register(diffUpdateFileTool)
     registry.register(replaceFileTool)
+    registry.register(approvalTool)
+    registry.register(askQuestionTool)
     registry.register(
       createSubAgentTool({
         getProviderConfig: () => get().providerConfig,
@@ -300,6 +311,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const controller = new AbortController()
     set({ _abortController: controller })
 
+    let pendingResolve: ((result: Record<string, unknown>) => void) | null = null
+
     try {
       const gen = AgentLoop.run(apiMessages, {
         provider,
@@ -312,6 +325,11 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         dirDescriptions,
         description,
         signal: controller.signal,
+        onUserInput: (_toolName, _input) => {
+          return new Promise<Record<string, unknown> | null>((resolve) => {
+            pendingResolve = resolve
+          })
+        },
       })
 
       // 流式处理 UI 事件
@@ -379,6 +397,19 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
           case 'tool_executing':
             toolCallMap.set(event.toolId, { name: event.toolName, input: {} })
+            break
+
+          case 'waiting_confirm':
+            set({
+              pendingTool: {
+                name: event.toolName,
+                input: event.input,
+                resolve: (result: Record<string, unknown>) => {
+                  pendingResolve?.(result)
+                  pendingResolve = null
+                },
+              },
+            })
             break
 
           case 'tool_complete': {
@@ -474,11 +505,12 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                   content: [{ type: 'text', text: `⚠️ ${event.message}` }],
                 })
               }
-              return { messages: msgs, error: event.message }
+              return { messages: msgs, error: event.message, pendingTool: null }
             })
             break
 
           case 'done':
+            set({ pendingTool: null })
             break
         }
       }
@@ -497,7 +529,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         }))
       }
     } finally {
-      set({ isStreaming: false, _abortController: null })
+      set({ isStreaming: false, _abortController: null, pendingTool: null })
 
       // 实时保存会话到历史记录
       const finalState = get()
@@ -559,7 +591,15 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const controller = get()._abortController
     if (controller) {
       controller.abort()
-      set({ isStreaming: false, _abortController: null })
+      set({ isStreaming: false, _abortController: null, pendingTool: null })
+    }
+  },
+
+  resolvePending: (result) => {
+    const state = get()
+    if (state.pendingTool) {
+      state.pendingTool.resolve(result)
+      set({ pendingTool: null })
     }
   },
 
