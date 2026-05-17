@@ -8,6 +8,8 @@ export interface FileMentionItem {
   title: string
   filePath: string
   volume?: string
+  isDir?: boolean
+  relativeDir?: string
 }
 
 export interface SelectedMention {

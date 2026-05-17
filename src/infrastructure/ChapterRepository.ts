@@ -1,6 +1,11 @@
 import type { Chapter } from '../domain/types/chapter'
 import type { IFileService } from './IFileService'
 
+/** 统一路径为正斜杠，避免 Windows 反斜杠与正斜杠混用导致去重失败 */
+function normalizeEntry(entry: { name: string; path: string; isDir: boolean }) {
+  return { ...entry, path: entry.path.replace(/\\/g, '/') }
+}
+
 export class ChapterRepository {
   constructor(private fs: IFileService) {}
 
@@ -11,12 +16,13 @@ export class ChapterRepository {
     const entries = await this.fs.readDir(chaptersDir)
     const chapters: Chapter[] = []
 
-    for (const entry of entries) {
+    const normalized = entries.map(normalizeEntry)
+    for (const entry of normalized) {
       if (entry.isDir) {
         // 卷目录 — 递归扫描卷内章节
         const volumeName = entry.name
         const volumeEntries = await this.fs.readDir(entry.path)
-        for (const volumeEntry of volumeEntries) {
+        for (const volumeEntry of volumeEntries.map(normalizeEntry)) {
           if (!volumeEntry.isDir && volumeEntry.name.endsWith('.md')) {
             const content = await this.fs.readFile(volumeEntry.path)
             chapters.push(this.parseChapter(bookDir, volumeEntry, content, volumeName))
