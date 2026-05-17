@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const listDirTool: ToolDef = {
   name: 'list_dir',
@@ -28,7 +29,7 @@ export const listDirTool: ToolDef = {
     try {
       const exists = await context.fileService.exists(dirPath)
       if (!exists) {
-        return { content: `目录不存在: ${dirPath}`, isError: true }
+        return { content: `目录不存在: ${toVirtualPath(dirPath, context.bookDir)}`, isError: true }
       }
       const entries = await context.fileService.readDir(dirPath)
       const lines = entries.map((e) => `${e.isDir ? '[DIR]' : '[FILE]'} ${e.name}`)

@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const grepTool: ToolDef = {
   name: 'grep',
@@ -49,7 +50,9 @@ export const grepTool: ToolDef = {
               const lines = content.split('\n')
               for (let i = 0; i < lines.length; i++) {
                 if (regex.test(lines[i])) {
-                  results.push(`${entry.path}:${i + 1}: ${lines[i].trim()}`)
+                  results.push(
+                    `${toVirtualPath(entry.path, context.bookDir)}:${i + 1}: ${lines[i].trim()}`,
+                  )
                 }
                 regex.lastIndex = 0
               }

@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const getFileInfoTool: ToolDef = {
   name: 'get_file_info',
@@ -28,7 +29,7 @@ export const getFileInfoTool: ToolDef = {
     try {
       const exists = await context.fileService.exists(filePath)
       if (!exists) {
-        return { content: `文件不存在: ${filePath}`, isError: true }
+        return { content: `文件不存在: ${toVirtualPath(filePath, context.bookDir)}`, isError: true }
       }
 
       // 先尝试作为文件读取来判断类型
@@ -42,7 +43,7 @@ export const getFileInfoTool: ToolDef = {
         isDir = true
       }
 
-      const info: string[] = [`路径: ${filePath}`, `类型: ${isDir ? '目录' : '文件'}`]
+      const info: string[] = [`路径: ${toVirtualPath(filePath, context.bookDir)}`, `类型: ${isDir ? '目录' : '文件'}`]
       if (size !== null) {
         info.push(`大小: ${size} bytes`)
       }

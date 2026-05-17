@@ -65,8 +65,8 @@ ${toolDescriptions}
 
 - 书名：${bookMeta.title}`)
       if (bookDir) {
-        bookParts.push(`- 当前书籍根目录: ${bookDir}
-- 请使用相对于此目录的路径（如 \`chapters/第一章.md\`），工具会自动解析`)
+        bookParts.push(`- 当前书籍根目录: /
+- 所有路径均相对于根目录 /（如 \`/chapters/第一章.md\`），工具会自动解析`)
       }
       if (description) {
         bookParts.push(`- 简介：${description}`)

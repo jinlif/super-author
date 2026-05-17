@@ -69,8 +69,8 @@ describe('SystemPrompt', () => {
       undefined,
       'C:/Users/test/books/mybook',
     )
-    expect(prompt).toContain('当前书籍根目录: C:/Users/test/books/mybook')
-    expect(prompt).toContain('请使用相对于此目录的路径')
+    expect(prompt).toContain('当前书籍根目录: /')
+    expect(prompt).toContain('所有路径均相对于根目录')
   })
 
   it('无 bookDir 时不注入路径指引', () => {

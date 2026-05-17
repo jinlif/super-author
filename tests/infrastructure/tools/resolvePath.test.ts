@@ -52,11 +52,68 @@ describe('resolvePath', () => {
     })
   })
 
-  describe('绝对路径越权拒绝', () => {
-    it('bookDir 外的路径应抛出错误', () => {
-      expect(() => resolvePath('/etc/passwd', bookDir)).toThrow('路径越权')
+  describe('虚拟根路径映射', () => {
+    it('虚拟根 / 映射到 bookDir', () => {
+      expect(resolvePath('/', bookDir)).toBe(bookDir)
     })
 
+    it('虚拟根下的路径映射到 bookDir 下', () => {
+      expect(resolvePath('/chapters/ch01.md', bookDir)).toBe(
+        'C:/Users/test/books/mybook/chapters/ch01.md',
+      )
+    })
+
+    it('虚拟根下的深层路径', () => {
+      expect(resolvePath('/outline/sub/item.md', bookDir)).toBe(
+        'C:/Users/test/books/mybook/outline/sub/item.md',
+      )
+    })
+
+    it('虚拟根 + 中文路径', () => {
+      expect(resolvePath('/chapters/第一章.md', bookDir)).toBe(
+        'C:/Users/test/books/mybook/chapters/第一章.md',
+      )
+    })
+
+    it('Windows 虚拟根路径不应抛出（原 /etc/passwd 类路径现在映射到 bookDir 内）', () => {
+      expect(resolvePath('/etc/passwd', bookDir)).toBe(
+        'C:/Users/test/books/mybook/etc/passwd',
+      )
+    })
+  })
+
+  describe('路径遍历防护', () => {
+    it('相对路径中的 .. 拒绝', () => {
+      expect(() => resolvePath('../outside', bookDir)).toThrow('路径越权')
+    })
+
+    it('相对路径中的深层 .. 拒绝', () => {
+      expect(() => resolvePath('chapters/../../outside', bookDir)).toThrow('路径越权')
+    })
+
+    it('虚拟根路径中的 .. 拒绝', () => {
+      expect(() => resolvePath('/../outside', bookDir)).toThrow('路径越权')
+    })
+
+    it('虚拟根路径中的深层 .. 拒绝', () => {
+      expect(() => resolvePath('/chapters/../../outside', bookDir)).toThrow('路径越权')
+    })
+
+    it('真实绝对路径中的 .. 拒绝（Windows）', () => {
+      expect(() => resolvePath('C:/Users/test/books/mybook/../outside', bookDir)).toThrow(
+        '路径越权',
+      )
+    })
+
+    it('真实绝对路径中的 .. 拒绝（Unix）', () => {
+      const unixBookDir = '/home/user/books/mybook'
+      expect(() => resolvePath('/home/user/books/mybook/../outside', unixBookDir)).toThrow(
+        '路径越权',
+      )
+    })
+  })
+
+  describe('绝对路径越权拒绝', () => {
     it('同级目录应抛出错误', () => {
       expect(() => resolvePath('C:/Users/test/books/other', bookDir)).toThrow('路径越权')
     })
@@ -65,8 +122,8 @@ describe('resolvePath', () => {
       expect(() => resolvePath('C:/Users/test/books', bookDir)).toThrow('路径越权')
     })
 
-    it('错误消息应包含实际路径', () => {
-      expect(() => resolvePath('/etc/passwd', bookDir)).toThrow('/etc/passwd')
+    it('其他驱动器号应抛出错误', () => {
+      expect(() => resolvePath('D:/other/path', bookDir)).toThrow('路径越权')
     })
   })
 
@@ -89,7 +146,10 @@ describe('resolvePath', () => {
       expect(resolvePath('/home/user/books/mybook/ch01.md', unixBookDir)).toBe(
         '/home/user/books/mybook/ch01.md',
       )
-      expect(() => resolvePath('/etc/passwd', unixBookDir)).toThrow('路径越权')
+      // /etc/passwd 是虚拟根路径，映射到 bookDir 内
+      expect(resolvePath('/etc/passwd', unixBookDir)).toBe(
+        '/home/user/books/mybook/etc/passwd',
+      )
     })
   })
 })

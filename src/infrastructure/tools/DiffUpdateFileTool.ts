@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const diffUpdateFileTool: ToolDef = {
   name: 'diff_update_file',
@@ -38,7 +39,7 @@ export const diffUpdateFileTool: ToolDef = {
       const original = await context.fileService.readFile(filePath)
       const result = applyUnifiedDiff(original, diff)
       await context.fileService.writeFile(filePath, result)
-      return { content: `文件已更新: ${filePath}` }
+      return { content: `文件已更新: ${toVirtualPath(filePath, context.bookDir)}` }
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true }
     }

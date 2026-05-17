@@ -13,6 +13,7 @@
 > - [Phase 2 设计](docs/superpowers/specs/2026-05-09-super-author-phase2-design.md)
 > - [Model Service 设计](docs/superpowers/specs/2026-05-10-editor-model-service-design.md)
 > - [Phase 3-6 实施计划](docs/superpowers/plans/2026-05-10-super-author-phase3-plan.md)
+> - [3.9a @文件引用增强设计](docs/superpowers/specs/2026-05-17-file-mention-enhancement-design.md)
 >
 > **参考资料：**
 >
@@ -26,30 +27,9 @@
 
 > 3.8 已全部完成
 
-### 3.9a @文件引用增强
+### 3.9a2 @文件引用增强
 
-**现状：** 当前 `@` 只扫描 4 个硬编码目录、仅 `.md`、无子目录递归、无索引缓存、输入框 `@` 文本无高亮。
-
-**方案：** 安装 `react-mentions-ts`（npm install react-mentions-ts），它内置透明 textarea + overlay 高亮、搜索弹窗、键盘导航、光标感知（`data-mention-selection`），一次性替代自实现的 `detectMention` + `FileMentions` 组件（减少约 200 行自定义代码）。同时改造 `FileMentionService` 为递归全目录扫描 + 索引缓存（requestIdleCallback 延迟构建）。
-
-- [ ] **安装依赖**：`npm install react-mentions-ts`
-- [ ] **改造 `FileMentionService` → 递归全目录扫描 + 索引缓存**
-  - 递归扫描 `bookDir`（排除 `book.json`、`.super-author/`），不限制文件扩展名
-  - requestIdleCallback 延迟构建索引，搜索变为同步 filter
-  - 书架切换/文件夹刷新时重建索引
-- [ ] **替换 `AgentInput.tsx` 中的输入组件**
-  - 移除 `detectMention()` + `FileMentions` 组件及 `FileMentions.css` 弹窗样式
-  - 引入 `<MentionsInput>` + `<Mention trigger="@" data={async provider}>`
-  - async data provider 对接 `FileMentionService.searchFiles`（走缓存索引）
-  - 移除 `react-textarea-autosize`，使用库的 `autoResize` prop
-- [ ] **调整发送逻辑**
-  - `value` 中存储 markup 格式 `@[文件名](filePath)`，`plainTextValue` 发给 AI
-  - `handleSend` 从 `value` 解析 markup 提取 filePath → 读取文件内容
-  - `selectedMentions` chips 保留，数据源改为从 `value` 解析
-- [ ] **CSS 适配**
-  - 删除 `FileMentions.css` 弹窗样式，保留 mention-chips 样式
-  - 配置 react-mentions-ts 的 Tailwind 样式
-- [ ] **测试**：索引构建、@ 选择 → 发送全链路、大目录性能
+**现状：** 当前src\presentation\agentPanel\AgentInput.tsx `@` 只扫描 4 个硬编码目录、仅 `.md`、无子目录递归、无索引缓存、输入框 `@` 文本无高亮。同时删除mention-chips
 
 ### 3.9b Agent 交互工具：approval + ask_question
 
@@ -215,6 +195,19 @@ AgentLoop 暂停 → pendingTool 设置 → UI 展示两个区域：
   - 添加 `.chat-row.sub-agent` 样式
   - `.chat-label` 显示 "SubAgent"，颜色与主 agent 区分（或其他视觉差异）
 
+### 3.9e setting模型配置保存和加载功能
+
+src\presentation\settings\SettingsPanel.tsx 目前模型配置只能被覆盖，用户可能有不同的模型设置需求。
+要求，新增保存为配置按钮，需要校验baseurl/apikey 以及模型都有正确配置，校验通过弹框输入保存的name，然后在~/.super-author/config文件夹下创建configTemp.json，其中key是用户保存的名称，value需要存储baseurl/apikey/模型/thinking模式/provider/max token
+
+### 3.9f token统计功能实现
+
+agent面板在输入框下面新增进度条，显示当前已用token和总token
+
+### 3.9g 删除清空会话按钮和相关功能
+
+清空会话和新建会话实际是相同功能，去掉清空会话
+
 ---
 
 ## 排队中
@@ -227,7 +220,7 @@ AgentLoop 暂停 → pendingTool 设置 → UI 展示两个区域：
 
 ## 已知问题
 
-暂无
+1. 模型切换的弹框部分被窗口截断
 
 ## 待优化
 

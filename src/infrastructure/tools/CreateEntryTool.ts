@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const createEntryTool: ToolDef = {
   name: 'create_entry',
@@ -32,10 +33,10 @@ export const createEntryTool: ToolDef = {
     try {
       if (input.content != null && typeof input.content === 'string') {
         await context.fileService.writeFile(resolvedPath, input.content)
-        return { content: `文件已创建: ${resolvedPath}` }
+        return { content: `文件已创建: ${toVirtualPath(resolvedPath, context.bookDir)}` }
       }
       await context.fileService.createDir(resolvedPath)
-      return { content: `目录已创建: ${resolvedPath}` }
+      return { content: `目录已创建: ${toVirtualPath(resolvedPath, context.bookDir)}` }
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true }
     }

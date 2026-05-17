@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const writeFileTool: ToolDef = {
   name: 'write_file',
@@ -38,7 +39,7 @@ export const writeFileTool: ToolDef = {
     }
     try {
       await context.fileService.writeFile(filePath, content)
-      return { content: `文件已写入: ${filePath}` }
+      return { content: `文件已写入: ${toVirtualPath(filePath, context.bookDir)}` }
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true }
     }

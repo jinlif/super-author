@@ -234,14 +234,14 @@ describe('路径沙箱 — 越权路径拒绝', () => {
   const ctx = createContext(new MockFileService())
 
   it('read_file 拒绝 bookDir 外绝对路径', async () => {
-    const result = await readFileTool.handler({ filePath: '/etc/passwd' }, ctx)
+    const result = await readFileTool.handler({ filePath: 'D:/etc/passwd' }, ctx)
     expect(result.isError).toBe(true)
     expect(result.content).toContain('路径越权')
   })
 
   it('write_file 拒绝 bookDir 外绝对路径', async () => {
     const result = await writeFileTool.handler(
-      { filePath: '/etc/passwd', content: 'hack' },
+      { filePath: 'D:/outside/path', content: 'hack' },
       ctx,
     )
     expect(result.isError).toBe(true)
@@ -249,20 +249,20 @@ describe('路径沙箱 — 越权路径拒绝', () => {
   })
 
   it('create_entry 拒绝 bookDir 外绝对路径', async () => {
-    const result = await createEntryTool.handler({ path: '/tmp/evil' }, ctx)
+    const result = await createEntryTool.handler({ path: 'D:/tmp/evil' }, ctx)
     expect(result.isError).toBe(true)
     expect(result.content).toContain('路径越权')
   })
 
   it('delete_entry 拒绝 bookDir 外绝对路径', async () => {
-    const result = await deleteEntryTool.handler({ path: '/tmp/target' }, ctx)
+    const result = await deleteEntryTool.handler({ path: 'D:/tmp/target' }, ctx)
     expect(result.isError).toBe(true)
     expect(result.content).toContain('路径越权')
   })
 
   it('rename_entry 拒绝 oldPath 越权', async () => {
     const result = await renameEntryTool.handler(
-      { oldPath: '/etc/passwd', newPath: '/book/new.md' },
+      { oldPath: 'D:/etc/passwd', newPath: '/book/new.md' },
       ctx,
     )
     expect(result.isError).toBe(true)
@@ -271,7 +271,7 @@ describe('路径沙箱 — 越权路径拒绝', () => {
 
   it('rename_entry 拒绝 newPath 越权', async () => {
     const result = await renameEntryTool.handler(
-      { oldPath: '/book/old.md', newPath: '/etc/new' },
+      { oldPath: '/book/old.md', newPath: 'D:/etc/new' },
       ctx,
     )
     expect(result.isError).toBe(true)
@@ -279,14 +279,14 @@ describe('路径沙箱 — 越权路径拒绝', () => {
   })
 
   it('grep 拒绝 bookDir 外绝对路径', async () => {
-    const result = await grepTool.handler({ pattern: 'test', searchPath: '/etc' }, ctx)
+    const result = await grepTool.handler({ pattern: 'test', searchPath: 'D:/outside' }, ctx)
     expect(result.isError).toBe(true)
     expect(result.content).toContain('路径越权')
   })
 
   it('diff_update_file 拒绝 bookDir 外绝对路径', async () => {
     const result = await diffUpdateFileTool.handler(
-      { filePath: '/etc/passwd', diff: '@@ -1,0 +1,0 @@\n+test' },
+      { filePath: 'D:/passwd', diff: '@@ -1,0 +1,0 @@\n+test' },
       ctx,
     )
     expect(result.isError).toBe(true)
@@ -294,14 +294,14 @@ describe('路径沙箱 — 越权路径拒绝', () => {
   })
 
   it('get_file_info 拒绝 bookDir 外绝对路径', async () => {
-    const result = await getFileInfoTool.handler({ filePath: '/etc/passwd' }, ctx)
+    const result = await getFileInfoTool.handler({ filePath: 'D:/etc/passwd' }, ctx)
     expect(result.isError).toBe(true)
     expect(result.content).toContain('路径越权')
   })
 
   it('replace_file 拒绝 bookDir 外绝对路径', async () => {
     const result = await replaceFileTool.handler(
-      { filePath: '/etc/passwd', pattern: 'root', replacement: 'admin' },
+      { filePath: 'D:/passwd', pattern: 'root', replacement: 'admin' },
       ctx,
     )
     expect(result.isError).toBe(true)

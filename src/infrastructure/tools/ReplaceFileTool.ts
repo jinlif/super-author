@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const replaceFileTool: ToolDef = {
   name: 'replace_file',
@@ -71,7 +72,7 @@ export const replaceFileTool: ToolDef = {
 
       const result = content.replace(regex, replacement)
       await context.fileService.writeFile(filePath, result)
-      return { content: `已替换 ${allMatches.length} 处匹配: ${filePath}` }
+      return { content: `已替换 ${allMatches.length} 处匹配: ${toVirtualPath(filePath, context.bookDir)}` }
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true }
     }

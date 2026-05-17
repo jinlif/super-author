@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const deleteEntryTool: ToolDef = {
   name: 'delete_entry',
@@ -28,10 +29,10 @@ export const deleteEntryTool: ToolDef = {
     try {
       const exists = await context.fileService.exists(resolvedPath)
       if (!exists) {
-        return { content: `路径不存在: ${resolvedPath}`, isError: true }
+        return { content: `路径不存在: ${toVirtualPath(resolvedPath, context.bookDir)}`, isError: true }
       }
       await context.fileService.remove(resolvedPath)
-      return { content: `已删除: ${resolvedPath}` }
+      return { content: `已删除: ${toVirtualPath(resolvedPath, context.bookDir)}` }
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true }
     }

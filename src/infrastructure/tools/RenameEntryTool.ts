@@ -1,5 +1,6 @@
 import type { ToolDef } from '../../domain/types/tool'
 import { resolvePath } from './resolvePath'
+import { toVirtualPath } from './virtualPath'
 
 export const renameEntryTool: ToolDef = {
   name: 'rename_entry',
@@ -37,11 +38,11 @@ export const renameEntryTool: ToolDef = {
     try {
       const exists = await context.fileService.exists(oldPath)
       if (!exists) {
-        return { content: `源路径不存在: ${oldPath}`, isError: true }
+        return { content: `源路径不存在: ${toVirtualPath(oldPath, context.bookDir)}`, isError: true }
       }
       const targetExists = await context.fileService.exists(newPath)
       if (targetExists) {
-        return { content: `目标路径已存在: ${newPath}`, isError: true }
+        return { content: `目标路径已存在: ${toVirtualPath(newPath, context.bookDir)}`, isError: true }
       }
 
       // IFileService 没有 rename 方法，使用 read + write + remove 实现
@@ -58,7 +59,7 @@ export const renameEntryTool: ToolDef = {
         const content = await context.fileService.readFile(oldPath)
         await context.fileService.writeFile(newPath, content)
         await context.fileService.remove(oldPath)
-        return { content: `已重命名: ${oldPath} -> ${newPath}` }
+        return { content: `已重命名: ${toVirtualPath(oldPath, context.bookDir)} -> ${toVirtualPath(newPath, context.bookDir)}` }
       }
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true }
