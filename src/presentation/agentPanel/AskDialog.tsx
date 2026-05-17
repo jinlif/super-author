@@ -15,6 +15,7 @@ export function AskDialog() {
   const resolvePending = useAgentStore((s) => s.resolvePending)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [selectedValues, setSelectedValues] = useState<Set<string>>(new Set())
+  const [inputValue, setInputValue] = useState('')
 
   const isMultiple = !!(
     (pendingTool?.input as Record<string, unknown>)?.multiple
@@ -29,10 +30,9 @@ export function AskDialog() {
   )
 
   const isOthersSelected = selectedValues.has(OTHERS_VALUE)
-  const inputText = inputRef.current?.value ?? ''
   const canSubmit =
     selectedValues.size > 0 &&
-    !(isOthersSelected && inputText.trim().length === 0)
+    !(isOthersSelected && inputValue.trim().length === 0)
 
   const allOptions: AskOption[] = [
     ...(options ?? []),
@@ -61,12 +61,11 @@ export function AskDialog() {
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return
-    const text = inputRef.current?.value ?? ''
     const selected = Array.from(selectedValues).filter(
       (v) => v !== OTHERS_VALUE,
     )
-    resolvePending({ action: 'answered', selected, text })
-  }, [canSubmit, resolvePending, selectedValues])
+    resolvePending({ action: 'answered', selected, text: inputValue })
+  }, [canSubmit, inputValue, resolvePending, selectedValues])
 
   if (!pendingTool || pendingTool.name !== 'ask_question') return null
   if (allOptions.length === 0) return null
@@ -101,6 +100,8 @@ export function AskDialog() {
               placeholder="输入内容..."
               minRows={1}
               maxRows={5}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
             />
           </div>
         )}

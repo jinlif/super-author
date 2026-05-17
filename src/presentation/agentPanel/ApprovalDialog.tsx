@@ -7,11 +7,11 @@ export function ApprovalDialog() {
   const resolvePending = useAgentStore((s) => s.resolvePending)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const [inputValue, setInputValue] = useState('')
 
   const isOthers = selectedOption === '__others__'
-  const inputText = inputRef.current?.value ?? ''
   const canSubmit =
-    selectedOption !== null && (!isOthers || inputText.trim().length > 0)
+    selectedOption !== null && (!isOthers || inputValue.trim().length > 0)
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return
@@ -20,10 +20,9 @@ export function ApprovalDialog() {
     } else if (selectedOption === 'reject') {
       resolvePending(null)
     } else if (selectedOption === '__others__') {
-      const text = inputRef.current?.value ?? ''
-      resolvePending({ action: 'feedback', text })
+      resolvePending({ action: 'feedback', text: inputValue })
     }
-  }, [canSubmit, selectedOption, resolvePending])
+  }, [canSubmit, selectedOption, inputValue, resolvePending])
 
   if (!pendingTool || pendingTool.name !== 'approval') return null
 
@@ -72,6 +71,8 @@ export function ApprovalDialog() {
               placeholder="补充反馈..."
               minRows={1}
               maxRows={5}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
             />
           </div>
         )}
