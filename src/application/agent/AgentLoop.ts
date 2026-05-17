@@ -1,6 +1,6 @@
 import type { AgentMessage, AgentUIEvent } from '../../domain/types/agent'
 import type { BookMeta } from '../../domain/types/book'
-import type { ToolContext } from '../../domain/types/tool'
+import type { ToolContext, ToolResult } from '../../domain/types/tool'
 import type { IProvider } from '../../infrastructure/providers/IProvider'
 import { SystemPrompt } from './SystemPrompt'
 import { ToolExecutor } from './ToolExecutor'
@@ -17,6 +17,10 @@ export interface AgentLoopOptions {
   description?: string
   signal?: AbortSignal
   maxTurns?: number
+  onUserInput?: (
+    toolName: string,
+    input: Record<string, unknown>,
+  ) => Promise<Record<string, unknown> | null>
 }
 
 export class AgentLoop {
@@ -33,6 +37,7 @@ export class AgentLoop {
       description,
       signal,
       maxTurns = DEFAULT_MAX_TURNS,
+      onUserInput,
     } = options
 
     const executor = new ToolExecutor(registry)
@@ -142,8 +147,38 @@ export class AgentLoop {
         return
       }
 
-      // 执行工具
-      const toolResults = await executor.executeAll(toolCalls, toolContext)
+      // 分离 needsUserInput 工具和普通工具
+      const needsInputCalls: typeof toolCalls = []
+      const normalCalls: typeof toolCalls = []
+      for (const tc of toolCalls) {
+        const tool = registry.get(tc.name)
+        if (tool?.needsUserInput && onUserInput) {
+          needsInputCalls.push(tc)
+        } else {
+          normalCalls.push(tc)
+        }
+      }
+
+      // 执行需要用户输入的工具（在 ToolExecutor 外处理）
+      const needsInputResults: { id: string; result: ToolResult }[] = []
+      for (const tc of needsInputCalls) {
+        yield { type: 'waiting_confirm', toolName: tc.name, input: tc.input }
+        const userResult = await onUserInput!(tc.name, tc.input)
+        if (userResult === null) {
+          yield { type: 'done' }
+          return
+        }
+        needsInputResults.push({
+          id: tc.id,
+          result: { content: JSON.stringify(userResult) },
+        })
+      }
+
+      // 执行普通工具
+      const normalResults = await executor.executeAll(normalCalls, toolContext)
+
+      // 合并结果
+      const toolResults = [...needsInputResults, ...normalResults]
 
       for (const tr of toolResults) {
         const matchedCall = toolCalls.find((tc) => tc.id === tr.id)
