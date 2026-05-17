@@ -13,11 +13,6 @@
 > - [Phase 2 设计](docs/superpowers/specs/2026-05-09-super-author-phase2-design.md)
 > - [Model Service 设计](docs/superpowers/specs/2026-05-10-editor-model-service-design.md)
 > - [Phase 3-6 实施计划](docs/superpowers/plans/2026-05-10-super-author-phase3-plan.md)
-> - [3.9a @文件引用增强设计](docs/superpowers/specs/2026-05-17-file-mention-enhancement-design.md)
->
-> **参考资料：**
->
-> - [react-mentions-ts 库文档](docs/context/react-mentions-ts.md) — Phase 3.9a @文件引用使用的第三方库
 >
 > 路线：B（Tauri + cline 核心模块）
 
@@ -26,10 +21,6 @@
 ## 当前：Phase 3.9
 
 > 3.8 已全部完成
-
-### 3.9a2 @文件引用增强
-
-**现状：** 当前src\presentation\agentPanel\AgentInput.tsx `@` 只扫描 4 个硬编码目录、仅 `.md`、无子目录递归、无索引缓存、输入框 `@` 文本无高亮。同时删除mention-chips
 
 ### 3.9b Agent 交互工具：approval + ask_question
 

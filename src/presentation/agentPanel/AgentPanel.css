@@ -429,6 +429,33 @@
   color: #6a6a6a;
 }
 
+/* @ 提及高亮 overlay */
+.mention-highlight-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px;
+  pointer-events: none;
+  color: transparent;
+  white-space: pre-wrap;
+  overflow: hidden;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 8px;
+  word-break: break-word;
+  z-index: 5;
+}
+
+.mention-highlight-layer mark {
+  background-color: color-mix(in srgb, #007acc 30%, transparent);
+  border-radius: 3px;
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, #007acc 30%, transparent);
+  color: transparent;
+}
+
 /* 自定义滚动条样式 */
 .agent-input::-webkit-scrollbar {
   width: 6px;

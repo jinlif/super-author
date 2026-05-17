@@ -10,6 +10,7 @@ import type { Command } from "../../domain/types/command";
 import type { SelectedMention } from "../../domain/types/fileMention";
 import { CommandSuggestions } from "./CommandSuggestions";
 import { FileMentions } from "./FileMentions";
+import { MentionHighlight } from "./MentionHighlight";
 import { ModelPickerModal } from "./ModelPickerModal";
 
 // 检测命令模式：行首 `/` 或空格后 `/`
@@ -51,6 +52,7 @@ export function AgentInput() {
   const [selectedMentions, setSelectedMentions] = useState<SelectedMention[]>(
     [],
   );
+  const [scrollTop, setScrollTop] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isStreaming = useAgentStore((s) => s.isStreaming);
@@ -249,31 +251,11 @@ export function AgentInput() {
           onSelect={handleMentionSelect}
           onClose={handleMentionClose}
         />
-        {/* Mention chips */}
-        {selectedMentions.length > 0 && (
-          <div className="mention-chips">
-            {selectedMentions.map((m, idx) => (
-              <span
-                key={m.item.filePath}
-                className="mention-chip"
-                title={m.item.filePath}
-              >
-                {m.displayText}
-                <button
-                  type="button"
-                  className="mention-chip-remove"
-                  onClick={() =>
-                    setSelectedMentions((prev) =>
-                      prev.filter((_, i) => i !== idx),
-                    )
-                  }
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Mention highlight overlay */}
+        <MentionHighlight
+          text={input}
+          scrollTop={scrollTop}
+        />
         <TextareaAutosize
           ref={textareaRef}
           className="agent-input"
@@ -282,6 +264,7 @@ export function AgentInput() {
           maxRows={15}
           value={input}
           onChange={(e) => handleInput(e.target.value)}
+          onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
           onKeyDown={handleKeyDown}
           disabled={isStreaming}
         />

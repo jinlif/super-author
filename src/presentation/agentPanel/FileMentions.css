@@ -111,39 +111,3 @@
   color: #858585;
   font-size: 12px;
 }
-
-.mention-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px 0;
-  min-height: 0;
-}
-
-.mention-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background-color: #007acc22;
-  border: 1px solid #007acc44;
-  border-radius: 4px;
-  color: #007acc;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.mention-chip-remove {
-  background: none;
-  border: none;
-  color: #007acc;
-  cursor: pointer;
-  font-size: 10px;
-  padding: 0 2px;
-  opacity: 0.7;
-  font-weight: bold;
-}
-
-.mention-chip-remove:hover {
-  opacity: 1;
-}

@@ -14,28 +14,101 @@ const FILE_TYPE_LABELS: Record<string, FileType> = {
   settings: "setting",
 };
 
-const EXCLUDED_FILES = new Set(["book.json", ".super-author"]);
+const TEXT_EXTENSIONS = new Set([".md", ".txt", ".mdoc"]);
+
+interface CacheEntry {
+  files: FileMentionItem[]
+  bookDir: string
+}
+
+let indexCache: CacheEntry | null = null
 
 export class FileMentionService {
-  // 从目录名推断文件类型
+  // 从路径推断文件类型
   private static inferFileTypeFromPath(path: string): FileType {
-    const lowerPath = path.toLowerCase();
+    const lowerPath = path.toLowerCase()
     for (const [keyword, type] of Object.entries(FILE_TYPE_LABELS)) {
       if (lowerPath.includes(keyword)) {
-        return type;
+        return type
       }
     }
-    return "other";
+    return "other"
+  }
+
+  // 从文件名去掉扩展名作为标题
+  private static fileNameToTitle(name: string): string {
+    const idx = name.lastIndexOf(".")
+    return idx > 0 ? name.substring(0, idx) : name
+  }
+
+  // 递归扫描目录
+  private static async scanDir(
+    dirPath: string,
+    bookDir: string,
+    fs: {
+      exists: (p: string) => Promise<boolean>
+      readDir: (p: string) => Promise<{ name: string; path: string; isDir: boolean }[]>
+    },
+    results: FileMentionItem[],
+  ): Promise<void> {
+    let entries: { name: string; path: string; isDir: boolean }[]
+    try {
+      entries = await fs.readDir(dirPath)
+    } catch {
+      return
+    }
+
+    for (const entry of entries) {
+      if (entry.isDir) {
+        // 跳过系统目录和隐藏目录
+        if (entry.name === ".super-author" || entry.name.startsWith(".")) continue
+        await this.scanDir(entry.path, bookDir, fs, results)
+        continue
+      }
+
+      // 跳过系统文件
+      if (entry.name === "book.json" || entry.name.startsWith(".")) continue
+      if (entry.name.endsWith(".json")) continue
+
+      // 只包含文本文件
+      const ext = entry.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ""
+      if (!TEXT_EXTENSIONS.has(ext)) continue
+
+      const filePath = entry.path
+      // 路径必须位于 bookDir 内
+      if (!filePath.startsWith(bookDir.replace(/\\/g, "/"))) continue
+
+      const title = this.fileNameToTitle(entry.name)
+
+      results.push({
+        id: filePath,
+        type: this.inferFileTypeFromPath(filePath),
+        title,
+        filePath,
+      })
+    }
+  }
+
+  // 使缓存失效
+  static invalidateCache(): void {
+    indexCache = null
   }
 
   // 获取书籍目录下所有可搜索的文件
   static async getSearchableFiles(): Promise<FileMentionItem[]> {
-    const bookStore = useBookStore.getState();
-    const { chapters, currentBook } = bookStore;
+    const bookStore = useBookStore.getState()
+    const { chapters, currentBook } = bookStore
 
-    if (!currentBook) return [];
+    if (!currentBook) return []
 
-    const items: FileMentionItem[] = [];
+    const bookDir = currentBook.directory.replace(/\\/g, "/")
+
+    // 缓存命中（同一本书的目录）
+    if (indexCache && indexCache.bookDir === bookDir) {
+      return indexCache.files
+    }
+
+    const items: FileMentionItem[] = []
 
     // 添加章节（从 chapters 列表）
     chapters.forEach((ch) => {
@@ -45,73 +118,49 @@ export class FileMentionService {
         title: ch.title,
         filePath: ch.filePath,
         volume: ch.volume,
-      });
-    });
+      })
+    })
 
-    // 扫描其他目录的 .md 文件
-    const dirsToScan = ["characters", "outline", "settings", "chapters"];
-    const bookDir = currentBook.directory;
+    // 递归扫描 bookDir
+    await this.scanDir(bookDir, bookDir, bookStore._fs, items)
 
-    for (const dirName of dirsToScan) {
-      const dirPath = `${bookDir}/${dirName}`;
-      try {
-        const exists = await bookStore._fs.exists(dirPath);
-        if (!exists) continue;
+    // 去重（章节可能已被文件扫描再次添加）
+    const seen = new Set<string>()
+    const deduped = items.filter((item) => {
+      if (seen.has(item.filePath)) return false
+      seen.add(item.filePath)
+      return true
+    })
 
-        const entries = await bookStore._fs.readDir(dirPath);
-        for (const entry of entries) {
-          // 跳过目录和排除的文件
-          if (entry.isDir || EXCLUDED_FILES.has(entry.name)) continue;
-
-          // 只支持 .md 文件
-          if (!entry.name.endsWith(".md")) continue;
-
-          const filePath = entry.path;
-          const fileName = entry.name.replace(".md", "");
-
-          // 检查是否已从 chapters 添加（避免重复）
-          const existingIndex = items.findIndex((i) => i.filePath === filePath);
-          if (existingIndex >= 0) continue;
-
-          items.push({
-            id: filePath,
-            type: this.inferFileTypeFromPath(filePath),
-            title: fileName,
-            filePath,
-          });
-        }
-      } catch {
-        // 扫描失败，跳过
-      }
-    }
-
-    return items;
+    indexCache = { files: deduped, bookDir }
+    return deduped
   }
 
-  // 搜索文件（同步版本，用于 UI 渲染）
+  // 搜索文件
   static async searchFiles(query: string): Promise<FileMentionItem[]> {
-    const files = await this.getSearchableFiles();
-    const q = query.toLowerCase().trim();
+    const files = await this.getSearchableFiles()
+    const q = query.toLowerCase().trim()
 
-    if (!q) return files;
+    if (!q) return files
 
     return files.filter(
       (f) =>
         f.title.toLowerCase().includes(q) ||
-        f.volume?.toLowerCase().includes(q) ||
-        f.type.toLowerCase().includes(q),
-    );
+        (f.volume?.toLowerCase().includes(q) ?? false) ||
+        f.type.toLowerCase().includes(q) ||
+        f.filePath.toLowerCase().includes(q),
+    )
   }
 
   // 读取文件内容
   static async readFileContent(filePath: string): Promise<string | null> {
-    const bookStore = useBookStore.getState();
+    const bookStore = useBookStore.getState()
     try {
-      const exists = await bookStore._fs.exists(filePath);
-      if (!exists) return null;
-      return await bookStore._fs.readFile(filePath);
+      const exists = await bookStore._fs.exists(filePath)
+      if (!exists) return null
+      return await bookStore._fs.readFile(filePath)
     } catch {
-      return null;
+      return null
     }
   }
 }

@@ -182,6 +182,8 @@ export const useBookStore = create<BookStore>((set, get) => {
 
     refreshFileExplorer: () => {
       set((state) => ({ fileExplorerRefreshKey: state.fileExplorerRefreshKey + 1 }))
+      // 文件变更时使 @ 引用缓存失效
+      import('../services/FileMentionService').then((m) => m.FileMentionService.invalidateCache())
     },
   }
 })
