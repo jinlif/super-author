@@ -41,7 +41,7 @@ interface AgentStore {
   pendingTool: {
     name: string
     input: Record<string, unknown>
-    resolve: (result: Record<string, unknown>) => void
+    resolve: (result: Record<string, unknown> | null) => void
   } | null
   _conversationCache: Record<string, AgentMessage[]>
 
@@ -311,7 +311,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const controller = new AbortController()
     set({ _abortController: controller })
 
-    let pendingResolve: ((result: Record<string, unknown>) => void) | null = null
+    let pendingResolve: ((result: Record<string, unknown> | null) => void) | null = null
 
     try {
       const gen = AgentLoop.run(apiMessages, {
@@ -404,7 +404,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
               pendingTool: {
                 name: event.toolName,
                 input: event.input,
-                resolve: (result: Record<string, unknown>) => {
+                resolve: (result: Record<string, unknown> | null) => {
                   pendingResolve?.(result)
                   pendingResolve = null
                 },
@@ -588,8 +588,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   },
 
   abortStreaming: () => {
-    const controller = get()._abortController
+    const state = get()
+    const controller = state._abortController
     if (controller) {
+      state.pendingTool?.resolve(null)
       controller.abort()
       set({ isStreaming: false, _abortController: null, pendingTool: null })
     }

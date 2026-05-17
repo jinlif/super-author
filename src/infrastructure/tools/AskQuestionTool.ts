@@ -15,6 +15,10 @@ export const askQuestionTool: ToolDef = {
           properties: {
             label: { type: 'string', description: '选项显示文本' },
             value: { type: 'string', description: '选项值' },
+            recommended: {
+              type: 'boolean',
+              description: '是否为推荐选项',
+            },
           },
           required: ['label', 'value'],
         },
