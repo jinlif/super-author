@@ -44,7 +44,7 @@ AgentLoop 暂停 → pendingTool 设置 → UI 展示两个区域：
     ↓
 用户点"同意" → resolvePending → AgentLoop 恢复 → AI 接着调 write_file
 用户点"拒绝" → AgentLoop 终止，reject 写入对话消息
-用户输入+提交 → AgentLoop 终止，输入内容写入对话消息
+用户选"其他..." + 输入 + 提交 → feedback 继续 AgentLoop，对话显示反馈内容
 ```
 
 - [ ] **SystemPrompt 改造**
@@ -119,10 +119,6 @@ agent面板在输入框下面新增进度条，显示当前已用token和总toke
 - **Phase 6** 高级功能（划词备注、角色管理、写作目标、修订历史、应用设置、性能优化）
 
 ---
-
-## 已知问题
-
-1. 模型切换的弹框部分被窗口截断
 
 ## 待优化
 
