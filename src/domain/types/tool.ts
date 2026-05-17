@@ -27,6 +27,7 @@ export interface ToolDef {
   inputSchema: Record<string, unknown>
   handler: ToolHandler
   isReadOnly: boolean
+  needsUserInput?: boolean
 }
 
 /** API 兼容格式（snake_case 字段名，不含 handler/isReadOnly） */

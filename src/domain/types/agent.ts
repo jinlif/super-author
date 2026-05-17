@@ -71,6 +71,7 @@ export type AgentUIEvent =
       result: string
     }
   | { type: 'turn_start'; turn: number }
+  | { type: 'waiting_confirm'; toolName: string; input: Record<string, unknown> }
   | { type: 'done' }
   | { type: 'error'; message: string }
   | { type: 'aborted' }
