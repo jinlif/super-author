@@ -555,3 +555,120 @@
 .review-btn.danger:hover {
   background-color: #3a1a1a;
 }
+
+/* Dialog overlay */
+.agent-dialog-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* Dialog content */
+.agent-dialog {
+  background-color: #252526;
+  border-top: 1px solid #3c3c3c;
+  padding: 12px;
+  z-index: 15;
+}
+
+.agent-dialog-title {
+  font-size: 13px;
+  color: #e0e0e0;
+  margin-bottom: 10px;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.agent-dialog-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.agent-dialog-btn {
+  padding: 6px 16px;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  background-color: #3c3c3c;
+  color: #cccccc;
+  transition: background-color 0.15s;
+}
+
+.agent-dialog-btn:hover {
+  background-color: #505050;
+}
+
+.agent-dialog-btn.primary {
+  background-color: #007acc;
+  border-color: #007acc;
+  color: #ffffff;
+}
+
+.agent-dialog-btn.primary:hover {
+  background-color: #005a9e;
+}
+
+.agent-dialog-btn.danger {
+  border-color: #c73e3e;
+  color: #c73e3e;
+  background-color: transparent;
+}
+
+.agent-dialog-btn.danger:hover {
+  background-color: rgba(199, 62, 62, 0.15);
+}
+
+.agent-dialog-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.agent-dialog-input {
+  flex: 1;
+  background-color: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 6px;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  font-size: 12px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.agent-dialog-input:focus {
+  border-color: #007acc;
+  box-shadow: 0 0 0 1px rgba(0, 122, 204, 0.25);
+}
+
+.agent-dialog-input::placeholder {
+  color: #6a6a6a;
+}
+
+.agent-dialog-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.agent-dialog-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #cccccc;
+  cursor: pointer;
+}
+
+.agent-dialog-option input {
+  accent-color: #007acc;
+}

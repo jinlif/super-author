@@ -4,6 +4,8 @@ import { useAgentStore } from '../../application/stores/agentStore'
 import { useLayoutStore } from '../../application/stores/layoutStore'
 import { AgentInput } from './AgentInput'
 import { AgentMessages } from './AgentMessages'
+import { ApprovalDialog } from './ApprovalDialog'
+import { AskDialog } from './AskDialog'
 import './AgentPanel.css'
 
 export function AgentPanel() {
@@ -12,6 +14,7 @@ export function AgentPanel() {
   const size = useLayoutStore((s) => s.panelSizes.agent)
   const toggleAgent = useLayoutStore((s) => s.toggleAgent)
   const providerConfig = useAgentStore((s) => s.providerConfig)
+  const pendingTool = useAgentStore((s) => s.pendingTool)
   const clearConversation = useAgentStore((s) => s.clearConversation)
   const conversationHistory = useAgentStore((s) => s.conversationHistory)
   const loadConversationFromHistory = useAgentStore((s) => s.loadConversationFromHistory)
@@ -109,6 +112,8 @@ export function AgentPanel() {
       )}
       <div className="agent-body">
         <AgentMessages />
+        {pendingTool?.name === 'approval' && <ApprovalDialog />}
+        {pendingTool?.name === 'ask_question' && <AskDialog />}
         <AgentInput />
       </div>
     </div>
