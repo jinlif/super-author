@@ -68,7 +68,7 @@ interface AgentStore {
     mentionContents?: string[],
   ) => Promise<void>
   abortStreaming: () => void
-  resolvePending: (result: Record<string, unknown>) => void
+  resolvePending: (result: Record<string, unknown> | null) => void
   clearConversation: () => void
   setProviderConfig: (config: Partial<ProviderConfig>) => void
   loadConversation: (
@@ -597,7 +597,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     }
   },
 
-  resolvePending: (result) => {
+  resolvePending: (result: Record<string, unknown> | null) => {
     const state = get()
     if (state.pendingTool) {
       state.pendingTool.resolve(result)
