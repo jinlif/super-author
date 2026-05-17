@@ -11,7 +11,6 @@ import type { SelectedMention } from "../../domain/types/fileMention";
 import { CommandSuggestions } from "./CommandSuggestions";
 import { FileMentions } from "./FileMentions";
 import { MentionHighlight } from "./MentionHighlight";
-import { ModelPickerModal } from "./ModelPickerModal";
 
 // 检测命令模式：行首 `/` 或空格后 `/`
 function detectCommand(text: string): { active: boolean; query: string } {
@@ -41,11 +40,16 @@ function detectMention(
   return { active: false, query: "", startPos: 0 };
 }
 
-export function AgentInput() {
+interface AgentInputProps {
+  onOpenModelPicker: () => void
+}
+
+export function AgentInput({
+  onOpenModelPicker,
+}: AgentInputProps) {
   const [input, setInput] = useState("");
   const [cmdActive, setCmdActive] = useState(false);
   const [cmdQuery, setCmdQuery] = useState("");
-  const [showModelPicker, setShowModelPicker] = useState(false);
   const [mentionActive, setMentionActive] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionStartPos, setMentionStartPos] = useState(0);
@@ -137,7 +141,7 @@ export function AgentInput() {
       setCmdActive(false);
       if (command.action === "modal") {
         if (command.modalName === "ModelPicker") {
-          setShowModelPicker(true);
+          onOpenModelPicker();
         }
         // 清除输入中的 /xxx
         setInput("");
@@ -290,11 +294,6 @@ export function AgentInput() {
         )}
       </div>
 
-      {/* Model picker modal */}
-      <ModelPickerModal
-        visible={showModelPicker}
-        onClose={() => setShowModelPicker(false)}
-      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { AgentInput } from './AgentInput'
 import { AgentMessages } from './AgentMessages'
 import { ApprovalDialog } from './ApprovalDialog'
 import { AskDialog } from './AskDialog'
+import { ModelPickerModal } from './ModelPickerModal'
 import './AgentPanel.css'
 
 export function AgentPanel() {
@@ -21,6 +22,7 @@ export function AgentPanel() {
   const loadConversationHistory = useAgentStore((s) => s.loadConversationHistory)
 
   const [showHistory, setShowHistory] = useState(false)
+  const [showModelPicker, setShowModelPicker] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // 组件挂载时加载历史列表
@@ -114,7 +116,11 @@ export function AgentPanel() {
         <AgentMessages />
         {pendingTool?.name === 'approval' && <ApprovalDialog />}
         {pendingTool?.name === 'ask_question' && <AskDialog />}
-        <AgentInput />
+        <AgentInput onOpenModelPicker={() => setShowModelPicker(true)} />
+        <ModelPickerModal
+          visible={showModelPicker}
+          onClose={() => setShowModelPicker(false)}
+        />
       </div>
     </div>
   )
