@@ -88,6 +88,7 @@ interface AgentStore {
   deleteConversationFromHistory: (id: string) => void
   loadConversationHistory: () => Promise<void>
   setTempChapterData: (data: { title: string; content: string } | null) => void
+  clearDiffForReview: () => void
 }
 
 const defaultProviderConfig: ProviderConfig = {
@@ -787,5 +788,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
   setTempChapterData: (_data) => {
     // 临时章节功能已废弃，保留方法签名兼容 UI 组件
+  },
+
+  clearDiffForReview: () => {
+    set({ diffForReview: null })
   },
 }))

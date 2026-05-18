@@ -29,7 +29,7 @@ export const askQuestionTool: ToolDef = {
     },
     required: ['question'],
   },
-  isReadOnly: false,
+  isReadOnly: true,
   needsUserInput: true,
   handler: async () => ({ content: '' }),
 }

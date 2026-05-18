@@ -165,13 +165,29 @@ export class AgentLoop {
         yield { type: 'waiting_confirm', toolName: tc.name, input: tc.input }
         const userResult = await onUserInput!(tc.name, tc.input)
         if (userResult === null) {
+          // 跳过工具执行，yield 拒绝结果让 UI 显示
+          const matchedCall = toolCalls.find((tc2) => tc2.id === tc.id)
+          yield {
+            type: 'tool_complete',
+            toolId: tc.id,
+            toolName: matchedCall?.name ?? tc.name,
+            input: tc.input,
+            result: '用户拒绝了此操作',
+          }
           yield { type: 'done' }
           return
         }
-        needsInputResults.push({
-          id: tc.id,
-          result: { content: JSON.stringify(userResult) },
-        })
+        const tool = registry.get(tc.name)
+        // 纯交互工具（如 approval）直接返回用户响应；有副作用的工具需要执行 handler
+        if (tool?.isReadOnly) {
+          needsInputResults.push({
+            id: tc.id,
+            result: { content: JSON.stringify(userResult) },
+          })
+        } else if (tool) {
+          const result = await tool.handler(tc.input, toolContext)
+          needsInputResults.push({ id: tc.id, result })
+        }
       }
 
       // 执行普通工具

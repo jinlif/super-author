@@ -37,8 +37,11 @@ export function EditorTabs() {
           }}
         >
           <span className="tab-label">
-            {tab.type !== 'settings' && <TabDirtyDot filePath={tab.filePath} />}
+            {tab.type !== 'settings' && tab.type !== 'diff' && (
+              <TabDirtyDot filePath={tab.filePath} />
+            )}
             {tab.type === 'settings' ? '⚙️ ' : ''}
+            {tab.type === 'diff' ? '⇄ ' : ''}
             {tab.fileName}
           </span>
           <button

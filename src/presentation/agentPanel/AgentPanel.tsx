@@ -114,7 +114,7 @@ export function AgentPanel() {
       )}
       <div className="agent-body">
         <AgentMessages />
-        {pendingTool?.name === 'approval' && <ApprovalDialog />}
+        {pendingTool && pendingTool.name !== 'ask_question' && <ApprovalDialog />}
         {pendingTool?.name === 'ask_question' && <AskDialog />}
         <AgentInput onOpenModelPicker={() => setShowModelPicker(true)} />
         <ModelPickerModal

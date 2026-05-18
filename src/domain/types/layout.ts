@@ -18,7 +18,13 @@ export interface EditorTab {
   id: string
   filePath: string
   fileName: string
-  type?: 'file' | 'settings'
+  type?: 'file' | 'settings' | 'diff'
+  diffData?: {
+    title: string
+    originalFilePath: string
+    original: string
+    modified: string
+  }
 }
 
 // 布局状态

@@ -25,7 +25,7 @@ export function ApprovalDialog() {
     }
   }, [canSubmit, selectedOption, inputValue, resolvePending])
 
-  if (!pendingTool || pendingTool.name !== 'approval') return null
+  if (!pendingTool) return null
 
   return (
     <div className="agent-dialog-overlay">

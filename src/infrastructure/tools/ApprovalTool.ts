@@ -11,7 +11,7 @@ export const approvalTool: ToolDef = {
     },
     required: ['title'],
   },
-  isReadOnly: false,
+  isReadOnly: true,
   needsUserInput: true,
   handler: async () => ({ content: '' }),
 }

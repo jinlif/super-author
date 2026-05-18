@@ -59,6 +59,11 @@ export function applyUnifiedDiff(original: string, diff: string): string {
   let origIdx = 0
 
   for (const line of diffLines) {
+    // 跳过 "no newline at end of file" 标记
+    if (line === '\\ No newline at end of file') {
+      continue
+    }
+
     // 跳过 diff 头部（---, +++, @@）
     if (line.startsWith('---') || line.startsWith('+++') || line.startsWith('@@')) {
       // 解析 @@ 行获取起始位置

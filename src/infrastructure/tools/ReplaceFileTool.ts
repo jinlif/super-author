@@ -4,7 +4,8 @@ import { toVirtualPath } from './virtualPath'
 
 export const replaceFileTool: ToolDef = {
   name: 'replace_file',
-  description: '使用正则表达式替换文件内容。匹配多个结果且非 global 模式时报错',
+  description:
+    '使用正则表达式替换文件内容。匹配多个结果且非 global 模式时报错。replacement 中的 \\n 会被转换为真实换行符。',
   inputSchema: {
     type: 'object',
     properties: {
@@ -71,7 +72,7 @@ export const replaceFileTool: ToolDef = {
         }
       }
 
-      const result = content.replace(regex, replacement)
+      const result = content.replace(regex, interpretEscapes(replacement))
       await context.fileService.writeFile(filePath, result)
       return { content: `已替换 ${allMatches.length} 处匹配: ${toVirtualPath(filePath, context.bookDir)}` }
     } catch (e) {
@@ -97,4 +98,15 @@ export function parseRegex(pattern: string): RegExp | null {
   } catch {
     return null
   }
+}
+
+/** 将字面转义序列（如 \n、\t）转换为实际字符 */
+function interpretEscapes(s: string): string {
+  return s.replace(/\\([nrt\\])/g, (_, ch: string) => {
+    if (ch === 'n') return '\n'
+    if (ch === 'r') return '\r'
+    if (ch === 't') return '\t'
+    if (ch === '\\') return '\\'
+    return `\\${ch}`
+  })
 }

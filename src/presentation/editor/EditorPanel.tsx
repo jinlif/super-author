@@ -16,6 +16,8 @@ export function EditorPanel() {
   const tabs = useEditorStore((s) => s.tabs);
   const activeTabId = useEditorStore((s) => s.activeTabId);
   const cancelCloseTab = useEditorStore((s) => s.cancelCloseTab);
+  const openDiff = useEditorStore((s) => s.openDiff);
+  const closeDiffTab = useEditorStore((s) => s.closeDiffTab);
 
   const diffForReview = useAgentStore((s) => s.diffForReview);
 
@@ -29,11 +31,17 @@ export function EditorPanel() {
   const monacoRef = useRef<typeof Monaco | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [liveWordCount, setLiveWordCount] = useState(0);
+  const lastDiffDataRef = useRef<{
+    title: string;
+    original: string;
+    modified: string;
+  } | null>(null);
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
-  const activeUri = activeTab?.filePath ?? null;
+  const activeUri = activeTab?.type !== "diff" ? activeTab?.filePath ?? null : null;
   const hasTabs = tabs.length > 0 && activeTab !== null;
   const isSettingsTab = activeTab?.type === "settings";
+  const isDiffTab = activeTab?.type === "diff";
 
   // 保存：通过 filePath 查找 Chapter，不依赖 currentChapter
   const doSave = useCallback(
@@ -208,6 +216,25 @@ export function EditorPanel() {
     }
   }, [hasTabs]);
 
+  // diffForReview 变化时自动打开/关闭 diff 标签
+  useEffect(() => {
+    if (diffForReview) {
+      lastDiffDataRef.current = {
+        title: diffForReview.title,
+        original: diffForReview.original,
+        modified: diffForReview.modified,
+      };
+      openDiff(
+        diffForReview.title,
+        diffForReview.filePath,
+        diffForReview.original,
+        diffForReview.modified,
+      );
+    } else {
+      closeDiffTab();
+    }
+  }, [diffForReview, openDiff, closeDiffTab]);
+
   // Agent 临时章节：创建只读标签
   const tempChapterData = useAgentStore((s) => s.tempChapterData);
   useEffect(() => {
@@ -237,7 +264,7 @@ export function EditorPanel() {
           className="editor-area"
           style={{ display: hasTabs && !isSettingsTab ? "flex" : "none" }}
         >
-          <div style={{ display: diffForReview ? "none" : "flex", height: "100%", flex: 1 }}>
+          <div style={{ display: isDiffTab ? "none" : "flex", height: "100%", flex: 1 }}>
             <Editor
               height="100%"
               defaultLanguage="markdown"
@@ -255,25 +282,23 @@ export function EditorPanel() {
               }}
             />
           </div>
-          <div style={{ display: diffForReview ? "flex" : "none", height: "100%", flex: 1 }}>
-            {diffForReview && (
-              <DiffEditor
-                height="100%"
-                language="markdown"
-                theme="vs-dark"
-                original={diffForReview.original}
-                modified={diffForReview.modified}
-                options={{
-                  readOnly: true,
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  wordWrap: "on",
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  renderOverviewRuler: false,
-                }}
-              />
-            )}
+          <div style={{ display: isDiffTab ? "flex" : "none", height: "100%", flex: 1 }}>
+            <DiffEditor
+              height="100%"
+              language="markdown"
+              theme="vs-dark"
+              original={lastDiffDataRef.current?.original ?? ""}
+              modified={lastDiffDataRef.current?.modified ?? ""}
+              options={{
+                readOnly: true,
+                minimap: { enabled: false },
+                fontSize: 14,
+                wordWrap: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                renderOverviewRuler: false,
+              }}
+            />
           </div>
         </div>
         {hasTabs && isSettingsTab && (

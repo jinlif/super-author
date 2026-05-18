@@ -1,5 +1,5 @@
-import type { BookMeta } from '../../domain/types/book'
-import type { ToolDef } from '../../domain/types/tool'
+import type { BookMeta } from "../../domain/types/book";
+import type { ToolDef } from "../../domain/types/tool";
 
 export class SystemPrompt {
   static build(
@@ -10,8 +10,11 @@ export class SystemPrompt {
     bookDir?: string,
   ): string {
     const toolDescriptions = tools
-      .map((t) => `  - ${t.name}: ${t.description}（${t.isReadOnly ? '只读' : '写入'}）`)
-      .join('\n')
+      .map(
+        (t) =>
+          `  - ${t.name}: ${t.description}（${t.isReadOnly ? "只读" : "写入"}）`,
+      )
+      .join("\n");
 
     const parts = [
       `# 角色定义
@@ -37,6 +40,7 @@ ${toolDescriptions}
 3. 创作前先查看大纲（outline/ 目录）
 4. 完成内容后使用写入工具保存
 5. write_file、diff_update_file、replace_file 调用时系统会自动弹出 diff 预览并请求用户审批，无需额外操作
+6. 需要询问用户问题时，请优先使用AskQuestion Tool询问，并且给出推荐选项
 
 ## 章节摘要
 
@@ -64,46 +68,51 @@ ${toolDescriptions}
 2. 如果需要更多上下文，使用工具获取
 3. 给出创作思路或直接生成内容
 4. 生成的内容应自然融入已有章节`,
-    ]
+    ];
 
     // 书籍信息
     if (bookMeta) {
-      const bookParts: string[] = []
+      const bookParts: string[] = [];
       bookParts.push(`## 当前书籍
 
-- 书名：${bookMeta.title}`)
+- 书名：${bookMeta.title}`);
       if (bookDir) {
         bookParts.push(`- 当前书籍根目录: /
-- 所有路径均相对于根目录 /（如 \`/chapters/第一章.md\`），工具会自动解析`)
+- 所有路径均相对于根目录 /（如 \`/chapters/第一章.md\`），工具会自动解析`);
       }
       if (description) {
-        bookParts.push(`- 简介：${description}`)
+        bookParts.push(`- 简介：${description}`);
       }
       if (bookMeta.tags.length > 0) {
-        bookParts.push(`- 标签：${bookMeta.tags.join('、')}`)
+        bookParts.push(`- 标签：${bookMeta.tags.join("、")}`);
       }
       if (bookMeta.style) {
-        bookParts.push(`- 风格：${bookMeta.style}`)
+        bookParts.push(`- 风格：${bookMeta.style}`);
       }
-      parts.push(bookParts.join('\n'))
+      parts.push(bookParts.join("\n"));
     }
 
     // 目录描述
-    const dirEntries = Object.entries(dirDescriptions)
+    const dirEntries = Object.entries(dirDescriptions);
     if (dirEntries.length > 0) {
-      const dirLines = dirEntries.map(([dir, desc]) => `  - ${dir}: ${desc}`).join('\n')
+      const dirLines = dirEntries
+        .map(([dir, desc]) => `  - ${dir}: ${desc}`)
+        .join("\n");
       parts.push(`## 书籍目录结构
 
-${dirLines}`)
+${dirLines}`);
     }
 
-    return parts.join('\n\n')
+    return parts.join("\n\n");
   }
 
   static buildForSubAgent(tools: ToolDef[]): string {
     const toolDescriptions = tools
-      .map((t) => `  - ${t.name}: ${t.description}（${t.isReadOnly ? '只读' : '写入'}）`)
-      .join('\n')
+      .map(
+        (t) =>
+          `  - ${t.name}: ${t.description}（${t.isReadOnly ? "只读" : "写入"}）`,
+      )
+      .join("\n");
 
     return `# 角色定义
 
@@ -120,6 +129,6 @@ ${toolDescriptions}
 1. 专注于完成分配给你的任务
 2. 使用工具获取所需信息
 3. 返回清晰、简洁的结果
-4. 如果遇到问题，明确说明原因`
+4. 如果遇到问题，明确说明原因`;
   }
 }

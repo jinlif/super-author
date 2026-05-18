@@ -24,6 +24,10 @@
 
 ### 3.9c 文件操作授权 + Diff 视图 ✅
 
+### 3.9c2 首句话调用大模型生成摘要
+
+当前历史文件的title是以第一句话作为title来的，现在把第一句话传给大模型，让其总结摘要作为会话标题。不走agentLoop生成，独立调用。
+
 ### 3.9d SubAgent 消息独立展示
 
 **现状：** SubAgent（`agent` 工具）在父 Agent 中执行时，其完整对话过程（thinking、tool calls、text 等）被折叠为一个工具调用块 `🔧 agent`，用户看不到子 agent 的思考过程和工具调用细节，只看到最终结果文本。
@@ -90,7 +94,8 @@ agent面板在输入框下面新增进度条，显示当前已用token和总toke
 - 面板拖拽调整大小
 - i18n 支持
 
-## bug（已修复记录）
+## bug
 
-> Bug 1: chapter-summary.json 路径嵌套 → SystemPrompt.ts:42 路径改为 `/chapter-summaries.json`（书籍根目录）
-> Bug 2: 创建章节/卷编号不一致 → SystemPrompt.ts 新增"文件/目录命名规范"章节，指引 AI 遵循与 UI 一致的编号约定
+1. 输入框 @ 引用文件，高亮错误，并且跨行不能正确高亮，其次输入框换行位置应该支持任意地方换行。
+2. 引入的文件没有添加到上下文中。参考历史会话C:\Users\77537\.superauthor\history\成为首富从当舔狗开始\conv-1779111097815.json
+3. 当前识别到@符号，后面跟着的内容就会高亮，我希望维护一个当前输入框选择的文件列表(走mention选中设置值)，只有对应内容会被高亮

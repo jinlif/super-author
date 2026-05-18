@@ -9,7 +9,7 @@ import { getFileInfoTool } from '../../src/infrastructure/tools/GetFileInfoTool'
 import { deleteEntryTool } from '../../src/infrastructure/tools/DeleteEntryTool'
 import { grepTool } from '../../src/infrastructure/tools/GrepTool'
 import { replaceFileTool } from '../../src/infrastructure/tools/ReplaceFileTool'
-import { diffUpdateFileTool } from '../../src/infrastructure/tools/DiffUpdateFileTool'
+import { diffUpdateFileTool, applyUnifiedDiff } from '../../src/infrastructure/tools/DiffUpdateFileTool'
 import { renameEntryTool } from '../../src/infrastructure/tools/RenameEntryTool'
 
 function createContext(fs: MockFileService): ToolContext {
@@ -227,6 +227,77 @@ describe('ReplaceFileTool', () => {
     expect(result.isError).toBeFalsy()
     const content = await fs.readFile('/book/ch01.md')
     expect(content).toBe('王五走进屋里\n李四坐下')
+  })
+
+  it('replacement 中的 \\n 应转换为真实换行符', async () => {
+    const fs = new MockFileService()
+    await fs.writeFile('/book/ch01.md', '明月几时有')
+    const result = await replaceFileTool.handler(
+      { filePath: '/book/ch01.md', pattern: '/.+/g', replacement: '床前明月光\\n疑是地上霜' },
+      createContext(fs),
+    )
+    expect(result.isError).toBeFalsy()
+    const content = await fs.readFile('/book/ch01.md')
+    expect(content).toBe('床前明月光\n疑是地上霜')
+  })
+})
+
+describe('DiffUpdateFileTool', () => {
+  it('应应用 unified diff 更新文件', async () => {
+    const fs = new MockFileService()
+    await fs.writeFile('/book/ch01.md', '床前明月光\n疑是地上霜')
+    const diff = [
+      '--- /book/ch01.md',
+      '+++ /book/ch01.md',
+      '@@ -1,2 +1,2 @@',
+      '-床前明月光',
+      '+床前看月光',
+      ' 疑是地上霜',
+    ].join('\n')
+    const result = await diffUpdateFileTool.handler(
+      { filePath: '/book/ch01.md', diff },
+      createContext(fs),
+    )
+    expect(result.isError).toBeFalsy()
+    const content = await fs.readFile('/book/ch01.md')
+    expect(content).toBe('床前看月光\n疑是地上霜')
+  })
+
+  it('应正确处理 "No newline at end of file" 标记', async () => {
+    const fs = new MockFileService()
+    await fs.writeFile('/book/ch01.md', '明月几时有')
+    const diff = [
+      '--- /book/ch01.md',
+      '+++ /book/ch01.md',
+      '@@ -1 +1 @@',
+      '-明月几时有',
+      '\\ No newline at end of file',
+      '+床前明月光',
+      '\\ No newline at end of file',
+    ].join('\n')
+    const result = await diffUpdateFileTool.handler(
+      { filePath: '/book/ch01.md', diff },
+      createContext(fs),
+    )
+    expect(result.isError).toBeFalsy()
+    const content = await fs.readFile('/book/ch01.md')
+    expect(content).toBe('床前明月光')
+  })
+})
+
+describe('applyUnifiedDiff', () => {
+  it('应跳过 "\\ No newline at end of file" 标记', () => {
+    const original = 'line1\nline2'
+    const diff = [
+      '@@ -1,2 +1,2 @@',
+      '-line1',
+      '\\ No newline at end of file',
+      '+line1 modified',
+      '\\ No newline at end of file',
+      ' line2',
+    ].join('\n')
+    const result = applyUnifiedDiff(original, diff)
+    expect(result).toBe('line1 modified\nline2')
   })
 })
 

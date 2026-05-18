@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import type { EditorTab } from '../../domain/types/layout'
 import { useModelService } from '../services/ModelService'
+import { useAgentStore } from './agentStore'
 
 interface EditorStore {
   tabs: EditorTab[]
@@ -9,6 +10,8 @@ interface EditorStore {
 
   openFile: (filePath: string, fileName: string, content: string) => void
   openSettings: () => void
+  openDiff: (title: string, filePath: string, original: string, modified: string) => void
+  closeDiffTab: () => void
   setActiveTab: (tabId: string) => void
   requestCloseTab: (tabId: string) => void
   forceCloseTab: (tabId: string) => void
@@ -66,6 +69,42 @@ export const useEditorStore = create<EditorStore>((set) => ({
       }
     }),
 
+  openDiff: (title, filePath, original, modified) =>
+    set((state) => {
+      const DIFF_PATH = `diff://${filePath}`
+      const existing = state.tabs.find((t) => t.filePath === DIFF_PATH)
+      if (existing) {
+        // 更新已有 diff 标签的数据并激活
+        return {
+          tabs: state.tabs.map((t) =>
+            t.id === existing.id
+              ? { ...t, diffData: { title, originalFilePath: filePath, original, modified } }
+              : t,
+          ),
+          activeTabId: existing.id,
+        }
+      }
+      const id = `tab-${nextId++}`
+      const newTab: EditorTab = {
+        id,
+        filePath: DIFF_PATH,
+        fileName: `Diff: ${title}`,
+        type: 'diff',
+        diffData: { title, originalFilePath: filePath, original, modified },
+      }
+      return {
+        tabs: [...state.tabs, newTab],
+        activeTabId: id,
+      }
+    }),
+
+  closeDiffTab: () =>
+    set((state) => {
+      const diffTab = state.tabs.find((t) => t.type === 'diff')
+      if (!diffTab) return state
+      return closeTabLogic(state.tabs, diffTab.id, state.activeTabId)
+    }),
+
   setActiveTab: (tabId) => {
     useModelService.getState().clearPendingClose()
     set({ activeTabId: tabId })
@@ -75,6 +114,11 @@ export const useEditorStore = create<EditorStore>((set) => ({
     set((state) => {
       const tab = state.tabs.find((t) => t.id === tabId)
       if (!tab) return state
+      // diff 标签直接关闭，无需脏检查
+      if (tab.type === 'diff') {
+        useAgentStore.getState().clearDiffForReview()
+        return closeTabLogic(state.tabs, tabId, state.activeTabId)
+      }
       const ms = useModelService.getState()
       if (!ms.isDirty(tab.filePath)) {
         ms.release(tab.filePath)
