@@ -371,7 +371,9 @@
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* Error */
@@ -390,7 +392,11 @@
   flex-direction: column;
   gap: 6px;
   flex-shrink: 0;
-  background: linear-gradient(to bottom, rgba(30, 30, 30, 0.85), rgba(30, 30, 30, 1));
+  background: linear-gradient(
+    to bottom,
+    rgba(30, 30, 30, 0.85),
+    rgba(30, 30, 30, 1)
+  );
   backdrop-filter: blur(8px);
   position: sticky;
   bottom: 0;
@@ -403,12 +409,22 @@
   align-items: flex-end;
 }
 
-.agent-input {
+/* 输入框容器：overlay + textarea 共用定位上下文 */
+.agent-input-wrapper {
+  position: relative;
   flex: 1;
-  background-color: #2d2d2d;
+  min-width: 0;
+}
+
+.agent-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: transparent;
   border: 1px solid #404040;
   border-radius: 8px;
-  color: #e0e0e0;
+  color: transparent;
+  caret-color: #e0e0e0;
   padding: 10px 12px;
   font-size: 13px;
   resize: none;
@@ -417,7 +433,13 @@
   line-height: 1.5;
   max-height: 50vh;
   overflow-y: auto;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  scrollbar-width: none;
+  word-break: break-all;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  position: relative;
+  z-index: 2;
 }
 
 .agent-input:focus {
@@ -425,11 +447,17 @@
   box-shadow: 0 0 0 1px rgba(0, 122, 204, 0.25);
 }
 
+/* 文字透明但选中高亮可见 */
+.agent-input::selection {
+  background-color: rgba(0, 122, 204, 0.35);
+  color: transparent;
+}
+
 .agent-input::placeholder {
   color: #6a6a6a;
 }
 
-/* @ 提及高亮 overlay */
+/* @ 提及高亮 overlay — 显示实际文本 + 高亮 */
 .mention-highlight-layer {
   position: absolute;
   top: 0;
@@ -438,40 +466,28 @@
   bottom: 0;
   padding: 10px 12px;
   pointer-events: none;
-  color: transparent;
+  color: #e0e0e0;
+  background-color: #2d2d2d;
   white-space: pre-wrap;
   overflow: hidden;
   font-family: inherit;
   font-size: 13px;
   line-height: 1.5;
   border-radius: 8px;
-  word-break: break-word;
-  z-index: 5;
+  word-break: break-all;
+  z-index: 1;
 }
 
 .mention-highlight-layer mark {
   background-color: color-mix(in srgb, #007acc 30%, transparent);
   border-radius: 3px;
   box-shadow: 0 0 0 0.5px color-mix(in srgb, #007acc 30%, transparent);
-  color: transparent;
+  color: #268fdf;
 }
 
 /* 自定义滚动条样式 */
 .agent-input::-webkit-scrollbar {
-  width: 6px;
-}
-
-.agent-input::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.agent-input::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-}
-
-.agent-input::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.25);
+  display: none;
 }
 
 .agent-send-btn {
@@ -591,7 +607,9 @@
   cursor: pointer;
   background-color: #3c3c3c;
   color: #cccccc;
-  transition: background-color 0.15s, opacity 0.15s;
+  transition:
+    background-color 0.15s,
+    opacity 0.15s;
 }
 
 .agent-dialog-btn:hover {
