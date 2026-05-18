@@ -22,43 +22,7 @@
 
 > 3.8 已全部完成
 
-### 3.9c 文件操作授权 + Diff 视图（依赖 3.9b）
-
-**现状：** 文件写入工具直接执行无审批，需与 3.9b 的 `approval` 工具联动。diff 视图在编辑器区域（EditorPanel 用 Monaco DiffEditor）展示。
-
-**方案：**
-
-- 修改 SystemPrompt 要求 AI 在执行写入工具前先调 `approval`
-- EditorPanel 检测 pendingTool 中的文件变更信息，切换到 DiffEditor 模式
-- Diff 视图不在 ApprovalDialog 内，而在独立的编辑器区域
-
-**流程：**
-
-```
-Agent 准备写入文件
-    ↓ 先调 approval({ title: "建议修改 '第一章'" })
-    ↓
-AgentLoop 暂停 → pendingTool 设置 → UI 展示两个区域：
-    ├─ EditorPanel → Monaco DiffEditor（左侧原始，右侧新内容）
-    └─ 聊天面板底部 → ApprovalDialog
-    ↓
-用户点"同意" → resolvePending → AgentLoop 恢复 → AI 接着调 write_file
-用户点"拒绝" → AgentLoop 终止，reject 写入对话消息
-用户选"其他..." + 输入 + 提交 → feedback 继续 AgentLoop，对话显示反馈内容
-```
-
-- [ ] **SystemPrompt 改造**
-  - 增加规则：调用 `write_file`/`diff_update_file`/`replace_file` 前必须先调 `approval`
-  - 说明 approval 的工具描述和正确用法
-- [ ] **EditorPanel 集成 DiffEditor**
-  - agentStore 新增 `diffForReview: { title, filePath, original, modified } | null`
-  - 当 `pendingTool.name === 'approval'` 时，根据对话上下文提取文件变更信息设置 diffForReview
-  - EditorPanel 检测到 `diffForReview`，渲染 `<DiffEditor original={original} modified={modified} />`
-  - 审批完成后清除 diffForReview，恢复普通编辑器
-  - diff 模式下编辑器为只读状态
-- [ ] **审批完成后操作**
-  - 用户同意 → AI 接着调 `write_file`/`diff_update_file` 执行实际写入
-  - 用户拒绝 → AI 未执行写入，对话显示拒绝原因
+### 3.9c 文件操作授权 + Diff 视图 ✅
 
 ### 3.9d SubAgent 消息独立展示
 

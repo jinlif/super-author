@@ -237,24 +237,7 @@ export function EditorPanel() {
           className="editor-area"
           style={{ display: hasTabs && !isSettingsTab ? "flex" : "none" }}
         >
-          {diffForReview ? (
-            <DiffEditor
-              height="100%"
-              language="markdown"
-              theme="vs-dark"
-              original={diffForReview.original}
-              modified={diffForReview.modified}
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                fontSize: 14,
-                wordWrap: "on",
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                renderOverviewRuler: false,
-              }}
-            />
-          ) : (
+          <div style={{ display: diffForReview ? "none" : "flex", height: "100%", flex: 1 }}>
             <Editor
               height="100%"
               defaultLanguage="markdown"
@@ -271,7 +254,27 @@ export function EditorPanel() {
                 tabSize: 2,
               }}
             />
-          )}
+          </div>
+          <div style={{ display: diffForReview ? "flex" : "none", height: "100%", flex: 1 }}>
+            {diffForReview && (
+              <DiffEditor
+                height="100%"
+                language="markdown"
+                theme="vs-dark"
+                original={diffForReview.original}
+                modified={diffForReview.modified}
+                options={{
+                  readOnly: true,
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  wordWrap: "on",
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  renderOverviewRuler: false,
+                }}
+              />
+            )}
+          </div>
         </div>
         {hasTabs && isSettingsTab && (
           <div className="editor-settings-area">
