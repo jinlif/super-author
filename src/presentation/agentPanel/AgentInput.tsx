@@ -56,6 +56,7 @@ export function AgentInput({
   const [selectedMentions, setSelectedMentions] = useState<SelectedMention[]>(
     [],
   );
+  const selectedMentionsRef = useRef<SelectedMention[]>([]);
   const [scrollTop, setScrollTop] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -81,33 +82,39 @@ export function AgentInput({
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || isStreaming) return;
+
+    // 用 ref 获取最新值，避免闭包陷阱
+    const mentions = [...selectedMentionsRef.current];
     setInput("");
     setCmdActive(false);
     setMentionActive(false);
+    setSelectedMentions([]);
+    selectedMentionsRef.current = [];
 
     // 读取引用文件内容
     const mentionContents: string[] = [];
-    for (const mention of selectedMentions) {
-      const content = await FileMentionService.readFileContent(
-        mention.item.filePath,
-      );
-      if (content) {
-        mentionContents.push(
-          `## ${mention.item.title}\n路径: ${mention.item.filePath}\n\n${content}`,
+    for (const mention of mentions) {
+      try {
+        const content = await FileMentionService.readFileContent(
+          mention.item.filePath,
         );
+        if (content) {
+          mentionContents.push(
+            `## ${mention.item.title}\n路径: ${mention.item.filePath}\n\n${content}`,
+          );
+        } else {
+          console.warn(`[AgentInput] 文件为空或不存在: ${mention.item.filePath}`);
+        }
+      } catch (err) {
+        console.error(`[AgentInput] 读取文件失败: ${mention.item.filePath}`, err);
       }
     }
-    setSelectedMentions([]);
+
+    console.debug(`[AgentInput] 发送消息，引用文件数: ${mentionContents.length}/${mentions.length}`);
 
     const chapterContent = getCurrentChapterContent();
     sendMessage(text, chapterContent, mentionContents);
-  }, [
-    input,
-    isStreaming,
-    sendMessage,
-    getCurrentChapterContent,
-    selectedMentions,
-  ]);
+  }, [input, isStreaming, sendMessage, getCurrentChapterContent]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -125,6 +132,16 @@ export function AgentInput({
     const { active, query } = detectCommand(value);
     setCmdActive(active);
     setCmdQuery(query);
+
+    // 同步清理 selectedMentions：移除文本中已不存在的提及
+    setSelectedMentions((prev) => {
+      if (prev.length === 0) return prev;
+      const next = prev.filter((m) => value.includes(m.displayText));
+      if (next.length !== prev.length) {
+        selectedMentionsRef.current = next;
+      }
+      return next;
+    });
 
     // 文件提及检测
     if (textareaRef.current) {
@@ -180,7 +197,10 @@ export function AgentInput({
       // 替换输入框中的 @xxx 为 @文件名
       const mentionText = `@${item.title}`;
       const cursorPos = textareaRef.current?.selectionStart ?? input.length;
-      const beforeMention = input.substring(0, mentionStartPos);
+      // mentionStartPos 指向正则 (^|\s)@ 的起始位置，可能包含前导空格
+      // 若前导是空格，substring(0, pos) 会丢掉空格，需 +1 保留
+      const hasLeadingSpace = mentionStartPos > 0 && input[mentionStartPos] === ' ';
+      const beforeMention = input.substring(0, hasLeadingSpace ? mentionStartPos + 1 : mentionStartPos);
       const afterCursor = input.substring(cursorPos);
       const newInput = `${beforeMention}${mentionText} ${afterCursor}`;
       setInput(newInput);
@@ -189,7 +209,9 @@ export function AgentInput({
       setSelectedMentions((prev) => {
         // 避免重复选择
         if (prev.some((m) => m.item.filePath === item.filePath)) return prev;
-        return [...prev, { item, displayText: mentionText }];
+        const next = [...prev, { item, displayText: mentionText }];
+        selectedMentionsRef.current = next;
+        return next;
       });
 
       // 定位光标
@@ -255,23 +277,27 @@ export function AgentInput({
           onSelect={handleMentionSelect}
           onClose={handleMentionClose}
         />
-        {/* Mention highlight overlay */}
-        <MentionHighlight
-          text={input}
-          scrollTop={scrollTop}
-        />
-        <TextareaAutosize
-          ref={textareaRef}
-          className="agent-input"
-          placeholder="输入写作指令... (输入 / 触发命令，输入 @ 引用文件)"
-          minRows={2}
-          maxRows={15}
-          value={input}
-          onChange={(e) => handleInput(e.target.value)}
-          onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
-          onKeyDown={handleKeyDown}
-          disabled={isStreaming}
-        />
+        {/* 输入框容器：overlay + textarea 共用定位上下文 */}
+        <div className="agent-input-wrapper">
+          <MentionHighlight
+            text={input}
+            scrollTop={scrollTop}
+            selectedMentions={selectedMentions}
+          />
+          <TextareaAutosize
+            ref={textareaRef}
+            className="agent-input"
+            placeholder="输入写作指令... (输入 / 触发命令，输入 @ 引用文件)"
+            minRows={2}
+            maxRows={15}
+            value={input}
+            onChange={(e) => handleInput(e.target.value)}
+            onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+            onKeyDown={handleKeyDown}
+            disabled={isStreaming}
+            style={{ caretColor: '#e0e0e0', color: 'transparent' }}
+          />
+        </div>
         {isStreaming ? (
           <button
             type="button"
