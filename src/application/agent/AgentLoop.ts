@@ -185,8 +185,20 @@ export class AgentLoop {
             result: { content: JSON.stringify(userResult) },
           })
         } else if (tool) {
-          const result = await tool.handler(tc.input, toolContext)
-          needsInputResults.push({ id: tc.id, result })
+          // 用户选择"其他"并提供反馈时，跳过工具执行，将拒绝+反馈返回给 LLM
+          if (userResult.action === 'feedback') {
+            const feedbackText = String(userResult.text ?? '')
+            needsInputResults.push({
+              id: tc.id,
+              result: {
+                content: `用户拒绝了此操作，反馈：${feedbackText}`,
+                isError: true,
+              },
+            })
+          } else {
+            const result = await tool.handler(tc.input, toolContext)
+            needsInputResults.push({ id: tc.id, result })
+          }
         }
       }
 
