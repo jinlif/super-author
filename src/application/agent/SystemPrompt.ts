@@ -36,6 +36,7 @@ ${toolDescriptions}
 2. 需要角色信息时读取 characters/ 目录下的文件
 3. 创作前先查看大纲（outline/ 目录）
 4. 完成内容后使用写入工具保存
+5. write_file、diff_update_file、replace_file 调用时系统会自动弹出 diff 预览并请求用户审批，无需额外操作
 
 ## 章节摘要
 

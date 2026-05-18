@@ -9,6 +9,8 @@ import type { IProvider } from '../../infrastructure/providers/IProvider'
 import { createEntryTool } from '../../infrastructure/tools/CreateEntryTool'
 import { deleteEntryTool } from '../../infrastructure/tools/DeleteEntryTool'
 import { resolvePath } from '../../infrastructure/tools/resolvePath'
+import { applyUnifiedDiff } from '../../infrastructure/tools/DiffUpdateFileTool'
+import { parseRegex } from '../../infrastructure/tools/ReplaceFileTool'
 import { diffUpdateFileTool } from '../../infrastructure/tools/DiffUpdateFileTool'
 import { getFileInfoTool } from '../../infrastructure/tools/GetFileInfoTool'
 import { grepTool } from '../../infrastructure/tools/GrepTool'
@@ -42,6 +44,12 @@ interface AgentStore {
     name: string
     input: Record<string, unknown>
     resolve: (result: Record<string, unknown> | null) => void
+  } | null
+  diffForReview: {
+    title: string
+    filePath: string
+    original: string
+    modified: string
   } | null
   _conversationCache: Record<string, AgentMessage[]>
 
@@ -101,6 +109,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   tempChapterData: null,
   conversationHistory: [],
   pendingTool: null,
+  diffForReview: null,
   _conversationCache: {},
 
   _registry: null,
@@ -399,18 +408,59 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             toolCallMap.set(event.toolId, { name: event.toolName, input: {} })
             break
 
-          case 'waiting_confirm':
-            set({
-              pendingTool: {
-                name: event.toolName,
-                input: event.input,
-                resolve: (result: Record<string, unknown> | null) => {
-                  pendingResolve?.(result)
-                  pendingResolve = null
-                },
+          case 'waiting_confirm': {
+            const toolName = event.toolName
+            const input = event.input
+            const filePath = input.filePath as string | undefined
+            const title = String(input.title ?? `确认 ${toolName} 操作`)
+
+            const newPendingTool = {
+              name: toolName,
+              input,
+              resolve: (result: Record<string, unknown> | null) => {
+                pendingResolve?.(result)
+                pendingResolve = null
               },
-            })
+            }
+
+            // 文件写入工具：计算 diffForReview
+            const writeFileTools = ['write_file', 'diff_update_file', 'replace_file']
+            if (writeFileTools.includes(toolName) && filePath) {
+              const bookDir = get()._toolContext?.bookDir
+              let originalContent = ''
+              try {
+                const absolutePath = resolvePath(filePath, bookDir ?? '')
+                originalContent = await get()._fs.readFile(absolutePath)
+              } catch {
+                // 文件不存在（新建）— original 为空
+                originalContent = ''
+              }
+
+              let modifiedContent = ''
+              if (toolName === 'write_file') {
+                modifiedContent = String(input.content ?? '')
+              } else if (toolName === 'diff_update_file') {
+                const diff = String(input.diff ?? '')
+                modifiedContent = applyUnifiedDiff(originalContent, diff)
+              } else if (toolName === 'replace_file') {
+                const pattern = String(input.pattern ?? '')
+                const replacement = String(input.replacement ?? '')
+                const regex = parseRegex(pattern)
+                if (regex) {
+                  modifiedContent = originalContent.replace(regex, replacement)
+                }
+              }
+
+              set({
+                pendingTool: newPendingTool,
+                diffForReview: { title, filePath, original: originalContent, modified: modifiedContent },
+              })
+            } else {
+              // 非文件工具（approval、ask_question 等）
+              set({ pendingTool: newPendingTool, diffForReview: null })
+            }
             break
+          }
 
           case 'tool_complete': {
             const tc = toolCallMap.get(event.toolId)
@@ -505,12 +555,12 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                   content: [{ type: 'text', text: `⚠️ ${event.message}` }],
                 })
               }
-              return { messages: msgs, error: event.message, pendingTool: null }
+              return { messages: msgs, error: event.message, pendingTool: null, diffForReview: null }
             })
             break
 
           case 'done':
-            set({ pendingTool: null })
+            set({ pendingTool: null, diffForReview: null })
             break
         }
       }
@@ -529,7 +579,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         }))
       }
     } finally {
-      set({ isStreaming: false, _abortController: null, pendingTool: null })
+      set({ isStreaming: false, _abortController: null, pendingTool: null, diffForReview: null })
 
       // 实时保存会话到历史记录
       const finalState = get()
@@ -593,7 +643,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     if (controller) {
       state.pendingTool?.resolve(null)
       controller.abort()
-      set({ isStreaming: false, _abortController: null, pendingTool: null })
+      set({ isStreaming: false, _abortController: null, pendingTool: null, diffForReview: null })
     }
   },
 
@@ -601,7 +651,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const state = get()
     if (state.pendingTool) {
       state.pendingTool.resolve(result)
-      set({ pendingTool: null })
+      set({ pendingTool: null, diffForReview: null })
     }
   },
 

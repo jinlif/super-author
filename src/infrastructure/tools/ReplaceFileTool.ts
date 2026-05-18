@@ -24,6 +24,7 @@ export const replaceFileTool: ToolDef = {
     required: ['filePath', 'pattern', 'replacement'],
   },
   isReadOnly: false,
+  needsUserInput: true,
   handler: async (input, context) => {
     if (!input.filePath || typeof input.filePath !== 'string') {
       return { content: 'Parameter "filePath" is required', isError: true }
@@ -80,7 +81,7 @@ export const replaceFileTool: ToolDef = {
 }
 
 /** 解析正则表达式字符串，支持 /pattern/flags 格式和纯文本格式 */
-function parseRegex(pattern: string): RegExp | null {
+export function parseRegex(pattern: string): RegExp | null {
   // 尝试 /pattern/flags 格式
   const regexMatch = pattern.match(/^\/(.+)\/([gimsuy]*)$/)
   if (regexMatch) {

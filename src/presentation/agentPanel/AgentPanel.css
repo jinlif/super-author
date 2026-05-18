@@ -658,6 +658,35 @@
   accent-color: #007acc;
 }
 
+/* 审批文件信息 */
+.approval-file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  background-color: #1a1a1a;
+  border-radius: 4px;
+  border-left: 2px solid #4ec9b0;
+}
+
+.approval-file-path {
+  font-size: 12px;
+  color: #4ec9b0;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.approval-file-stats {
+  font-size: 11px;
+  color: #858585;
+  flex-shrink: 0;
+}
+
 /* Submit button row — 右下角对齐 */
 .agent-dialog-submit-row {
   display: flex;

@@ -20,6 +20,7 @@ export const diffUpdateFileTool: ToolDef = {
     required: ['filePath', 'diff'],
   },
   isReadOnly: false,
+  needsUserInput: true,
   handler: async (input, context) => {
     if (!input.filePath || typeof input.filePath !== 'string') {
       return { content: 'Parameter "filePath" is required', isError: true }
@@ -50,7 +51,7 @@ export const diffUpdateFileTool: ToolDef = {
  * 简单的 unified diff 应用器
  * 解析 unified diff 格式并应用到原文
  */
-function applyUnifiedDiff(original: string, diff: string): string {
+export function applyUnifiedDiff(original: string, diff: string): string {
   const originalLines = original.split('\n')
   const diffLines = diff.split('\n')
 

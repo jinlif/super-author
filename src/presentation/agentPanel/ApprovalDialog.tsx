@@ -4,6 +4,7 @@ import { useAgentStore } from '../../application/stores/agentStore'
 
 export function ApprovalDialog() {
   const pendingTool = useAgentStore((s) => s.pendingTool)
+  const diffForReview = useAgentStore((s) => s.diffForReview)
   const resolvePending = useAgentStore((s) => s.resolvePending)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
@@ -32,6 +33,15 @@ export function ApprovalDialog() {
         <div className="agent-dialog-title">
           {String(pendingTool.input.title ?? '确认操作')}
         </div>
+
+        {diffForReview && (
+          <div className="approval-file-info">
+            <span className="approval-file-path">{diffForReview.filePath}</span>
+            <span className="approval-file-stats">
+              {diffForReview.original.split('\n').length} → {diffForReview.modified.split('\n').length} 行
+            </span>
+          </div>
+        )}
 
         <div className="agent-dialog-options">
           <label className="agent-dialog-option">

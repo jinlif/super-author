@@ -20,6 +20,7 @@ export const writeFileTool: ToolDef = {
     required: ['filePath', 'content'],
   },
   isReadOnly: false,
+  needsUserInput: true,
   handler: async (input, context) => {
     if (!input.filePath || typeof input.filePath !== 'string') {
       return { content: 'Parameter "filePath" is required', isError: true }

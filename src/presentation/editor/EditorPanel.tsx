@@ -1,4 +1,4 @@
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { DiffEditor, type OnMount } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import type { editor } from "monaco-editor";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -16,6 +16,8 @@ export function EditorPanel() {
   const tabs = useEditorStore((s) => s.tabs);
   const activeTabId = useEditorStore((s) => s.activeTabId);
   const cancelCloseTab = useEditorStore((s) => s.cancelCloseTab);
+
+  const diffForReview = useAgentStore((s) => s.diffForReview);
 
   const updateValue = useModelService((s) => s.updateValue);
   const pendingCloseUri = useModelService((s) => s.pendingCloseUri);
@@ -235,22 +237,41 @@ export function EditorPanel() {
           className="editor-area"
           style={{ display: hasTabs && !isSettingsTab ? "flex" : "none" }}
         >
-          <Editor
-            height="100%"
-            defaultLanguage="markdown"
-            theme="vs-dark"
-            onChange={handleChange}
-            onMount={handleEditorDidMount}
-            options={{
-              minimap: { enabled: true },
-              fontSize: 14,
-              lineNumbers: "on",
-              wordWrap: "on",
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-            }}
-          />
+          {diffForReview ? (
+            <DiffEditor
+              height="100%"
+              language="markdown"
+              theme="vs-dark"
+              original={diffForReview.original}
+              modified={diffForReview.modified}
+              options={{
+                readOnly: true,
+                minimap: { enabled: false },
+                fontSize: 14,
+                wordWrap: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                renderOverviewRuler: false,
+              }}
+            />
+          ) : (
+            <Editor
+              height="100%"
+              defaultLanguage="markdown"
+              theme="vs-dark"
+              onChange={handleChange}
+              onMount={handleEditorDidMount}
+              options={{
+                minimap: { enabled: true },
+                fontSize: 14,
+                lineNumbers: "on",
+                wordWrap: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+              }}
+            />
+          )}
         </div>
         {hasTabs && isSettingsTab && (
           <div className="editor-settings-area">
