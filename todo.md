@@ -125,3 +125,8 @@ agent面板在输入框下面新增进度条，显示当前已用token和总toke
 - 标题栏主题色与 VS Code 暗色主题对齐
 - 面板拖拽调整大小
 - i18n 支持
+
+## bug（已修复记录）
+
+> Bug 1: chapter-summary.json 路径嵌套 → SystemPrompt.ts:42 路径改为 `/chapter-summaries.json`（书籍根目录）
+> Bug 2: 创建章节/卷编号不一致 → SystemPrompt.ts 新增"文件/目录命名规范"章节，指引 AI 遵循与 UI 一致的编号约定

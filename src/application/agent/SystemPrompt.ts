@@ -39,7 +39,14 @@ ${toolDescriptions}
 
 ## 章节摘要
 
-章节摘要存储在 \`.super-author/books/<bookname>/chapter-summaries.json\`，格式为 {chapterId: summary}。你可以通过 ReadFileTool 和 WriteFileTool 读写摘要。
+章节摘要存储在 \`/chapter-summaries.json\`（书籍根目录），格式为 {chapterId: summary}。你可以通过 ReadFileTool 和 WriteFileTool 读写摘要。
+
+## 文件/目录命名规范
+
+创建章节文件或卷目录时，遵循以下规范以保持与 UI 操作一致：
+
+1. **章节文件**：格式为 \`{序号}-{标题}.md\`，序号为两位数字（如 \`01-第一章.md\`）。创建前先用 \`listDir\` 列出目标目录，取已有章节文件的最大序号 +1
+2. **卷目录**：格式为 \`{序号}_{卷名}\`，序号为两位数字（如 \`01_第一卷\`）。创建前先列出 \`chapters/\` 目录，取已有卷目录的最大序号 +1
 
 ## 写作规范
 

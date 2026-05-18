@@ -53,7 +53,15 @@ describe('SystemPrompt', () => {
 
   it('应包含章节摘要声明', () => {
     const prompt = SystemPrompt.build([mockTool], null, {})
-    expect(prompt).toContain('chapter-summaries.json')
+    expect(prompt).toContain('/chapter-summaries.json')
+    expect(prompt).toContain('书籍根目录')
+  })
+
+  it('应包含章节/卷命名规范', () => {
+    const prompt = SystemPrompt.build([mockTool], null, {})
+    expect(prompt).toContain('章节文件')
+    expect(prompt).toContain('卷目录')
+    expect(prompt).toContain('listDir')
   })
 
   it('应包含 DESCRIPTION.md 内容', () => {
