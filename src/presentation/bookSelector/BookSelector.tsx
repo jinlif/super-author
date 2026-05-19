@@ -11,6 +11,7 @@ export function BookSelector() {
   const createBook = useBookStore((s) => s.createBook)
   const reloadCommands = useAgentStore((s) => s.reloadCommands)
   const initRegistry = useAgentStore((s) => s.initRegistry)
+  const loadAgents = useAgentStore((s) => s.loadAgents)
   const [showCreate, setShowCreate] = useState(false)
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
@@ -22,6 +23,7 @@ export function BookSelector() {
   const handleOpenBook = async (book: Book) => {
     await openBook(book)
     await reloadCommands(book.directory)
+    await loadAgents(book.directory)
     await initRegistry(book.directory)
   }
 

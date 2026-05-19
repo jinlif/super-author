@@ -1,12 +1,14 @@
 import { AgentLoop } from '../../application/agent/AgentLoop'
+import { SystemPrompt } from '../../application/agent/SystemPrompt'
 import type { ToolRegistry } from '../../application/agent/ToolRegistry'
-import type { AgentMessage, ProviderConfig } from '../../domain/types/agent'
+import type { AgentDefinition, AgentMessage, ProviderConfig } from '../../domain/types/agent'
 import type { ToolDef } from '../../domain/types/tool'
 import { createProvider } from '../providers/createProvider'
 
 export interface SubAgentToolDeps {
   getProviderConfig: () => ProviderConfig
   getRegistry: () => ToolRegistry
+  getAgentDefinitions: () => AgentDefinition[]
 }
 
 export function createSubAgentTool(deps: SubAgentToolDeps): ToolDef {
@@ -20,13 +22,17 @@ export function createSubAgentTool(deps: SubAgentToolDeps): ToolDef {
           type: 'string',
           description: '子任务描述',
         },
+        subagent_type: {
+          type: 'string',
+          description: 'Agent 类型名称（可选，对应 .md 文件中定义的 name）',
+        },
         model: {
           type: 'string',
           description: '模型名称（可选，默认使用当前配置的模型）',
         },
         maxTurns: {
           type: 'number',
-          description: '最大执行轮次（可选，默认 5）',
+          description: '最大执行轮次（可选，默认无限制）',
         },
       },
       required: ['prompt'],
@@ -38,21 +44,38 @@ export function createSubAgentTool(deps: SubAgentToolDeps): ToolDef {
         return { content: 'Parameter "prompt" is required', isError: true }
       }
 
-      const maxTurns = typeof input.maxTurns === 'number' ? input.maxTurns : 5
+      const maxTurns = typeof input.maxTurns === 'number' ? input.maxTurns : undefined
       const modelOverride = typeof input.model === 'string' ? input.model : undefined
+      const subagentType = typeof input.subagent_type === 'string' ? input.subagent_type : undefined
 
       try {
+        // 查找 agent 定义
+        const agentDefs = deps.getAgentDefinitions()
+        const agentDef = subagentType
+          ? agentDefs.find((a) => a.name === subagentType)
+          : undefined
+
         // 获取父 Registry，排除 agent 工具防递归
         const parentRegistry = deps.getRegistry()
-        const childTools = parentRegistry.list().filter((t) => t.name !== 'agent')
+        let childTools = parentRegistry.list().filter((t) => t.name !== 'agent')
+
+        // 若 agent 定义限制了工具列表，过滤工具
+        if (agentDef?.tools) {
+          childTools = childTools.filter((t) => agentDef.tools!.includes(t.name))
+        }
 
         // 准备 provider config
-        const config = { ...deps.getProviderConfig() }
-        if (modelOverride) {
-          config.model = modelOverride
-          // 同步 maxTokens
-          if (config.modelsConfig?.[modelOverride]?.maxTokens) {
-            config.maxTokens = config.modelsConfig[modelOverride].maxTokens
+        const parentConfig = deps.getProviderConfig()
+        const config = { ...parentConfig }
+        let effectiveModel = modelOverride ?? agentDef?.model
+        // 若 agent 定义的模型不在 provider 模型列表中，回退到当前系统模型
+        if (effectiveModel && !parentConfig.models.includes(effectiveModel)) {
+          effectiveModel = undefined
+        }
+        if (effectiveModel) {
+          config.model = effectiveModel
+          if (config.modelsConfig?.[effectiveModel]?.maxTokens) {
+            config.maxTokens = config.modelsConfig[effectiveModel].maxTokens
           }
         }
 
@@ -73,12 +96,18 @@ export function createSubAgentTool(deps: SubAgentToolDeps): ToolDef {
           childRegistry.register(tool)
         }
 
+        // 构建系统提示
+        const systemPromptOverride = agentDef
+          ? SystemPrompt.buildForAgent(agentDef, childTools)
+          : SystemPrompt.buildForSubAgent(childTools)
+
         // 执行子 Agent
         const gen = AgentLoop.run(messages, {
           provider,
           registry: childRegistry,
           toolContext: context,
-          maxTurns,
+          maxTurns: maxTurns ?? agentDef?.maxTurns,
+          systemPromptOverride,
         })
 
         let finalText = ''

@@ -237,7 +237,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const dirAgents = await configService.loadAgentsFromDirs(dirs, validModels)
 
     // 内置 agents 作为兜底，同名被书籍级/用户级覆盖
-    const builtinAgents = loadBuiltinAgents()
+    const builtinAgents = loadBuiltinAgents(validModels)
     const agentMap = new Map<string, AgentDefinition>()
     for (const agent of builtinAgents) agentMap.set(agent.name, agent)
     for (const agent of dirAgents) agentMap.set(agent.name, agent)
@@ -538,8 +538,27 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           }
 
           case 'tool_complete': {
-            // agent 工具的 SubAgent 消息已独立展示，跳过常规折叠块
-            if (event.toolName === 'agent') break
+            // agent 工具：记录 tool_use 到主 Agent 消息，SubAgent 内容已独立展示
+            if (event.toolName === 'agent') {
+              set((state) => {
+                const msgs = state.messages.map((m) => ({ ...m, content: [...m.content] }))
+                const mainMsg = [...msgs].reverse().find((m) => m.role === 'assistant' && m.source !== 'sub_agent')
+                if (mainMsg) {
+                  mainMsg.content.push({
+                    type: 'tool_use',
+                    id: event.toolId,
+                    name: event.toolName,
+                    input: event.input,
+                  })
+                  mainMsg.content.push({
+                    type: 'text',
+                    text: `\n\n[工具 ${event.toolName} 执行完成:\n${event.result}]`,
+                  })
+                }
+                return { messages: msgs }
+              })
+              break
+            }
 
             const tc = toolCallMap.get(event.toolId)
             // 使用 AgentLoop 传递的 input（已从流式 delta 中正确解析）

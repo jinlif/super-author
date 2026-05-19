@@ -1,3 +1,4 @@
+import type { AgentDefinition } from "../../domain/types/agent";
 import type { BookMeta } from "../../domain/types/book";
 import type { ToolDef } from "../../domain/types/tool";
 
@@ -8,6 +9,7 @@ export class SystemPrompt {
     dirDescriptions: Record<string, string>,
     description?: string,
     bookDir?: string,
+    agentDefinitions?: AgentDefinition[],
   ): string {
     const toolDescriptions = tools
       .map(
@@ -103,6 +105,18 @@ ${toolDescriptions}
 ${dirLines}`);
     }
 
+    // 可用 Agent 列表
+    if (agentDefinitions && agentDefinitions.length > 0) {
+      const agentLines = agentDefinitions
+        .map((a) => `  - ${a.name}: ${a.description}`)
+        .join("\n");
+      parts.push(`## 可用 Agent
+
+你可以通过 \`agent\` 工具的 \`subagent_type\` 参数选择特定 agent 执行子任务：
+
+${agentLines}`);
+    }
+
     return parts.join("\n\n");
   }
 
@@ -130,5 +144,22 @@ ${toolDescriptions}
 2. 使用工具获取所需信息
 3. 返回清晰、简洁的结果
 4. 如果遇到问题，明确说明原因`;
+  }
+
+  static buildForAgent(agentDef: AgentDefinition, tools: ToolDef[]): string {
+    const toolDescriptions = tools
+      .map(
+        (t) =>
+          `  - ${t.name}: ${t.description}（${t.isReadOnly ? "只读" : "写入"}）`,
+      )
+      .join("\n");
+
+    return `${agentDef.systemPrompt}
+
+## 工具使用指南
+
+你可以使用以下工具：
+
+${toolDescriptions}`;
   }
 }

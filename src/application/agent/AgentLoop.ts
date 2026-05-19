@@ -1,12 +1,10 @@
-import type { AgentMessage, AgentUIEvent } from '../../domain/types/agent'
+import type { AgentDefinition, AgentMessage, AgentUIEvent } from '../../domain/types/agent'
 import type { BookMeta } from '../../domain/types/book'
 import type { ToolContext, ToolResult } from '../../domain/types/tool'
 import type { IProvider } from '../../infrastructure/providers/IProvider'
 import { SystemPrompt } from './SystemPrompt'
 import { ToolExecutor } from './ToolExecutor'
 import type { ToolRegistry } from './ToolRegistry'
-
-const DEFAULT_MAX_TURNS = 30
 
 export interface AgentLoopOptions {
   provider: IProvider
@@ -17,6 +15,8 @@ export interface AgentLoopOptions {
   description?: string
   signal?: AbortSignal
   maxTurns?: number
+  systemPromptOverride?: string
+  agentDefinitions?: AgentDefinition[]
   onUserInput?: (
     toolName: string,
     input: Record<string, unknown>,
@@ -36,21 +36,31 @@ export class AgentLoop {
       dirDescriptions,
       description,
       signal,
-      maxTurns = DEFAULT_MAX_TURNS,
+      maxTurns,
+      systemPromptOverride,
+      agentDefinitions,
       onUserInput,
     } = options
 
     const executor = new ToolExecutor(registry)
-    const systemPrompt = SystemPrompt.build(
+    const systemPrompt = systemPromptOverride ?? SystemPrompt.build(
       registry.list(),
       bookMeta ?? null,
       dirDescriptions ?? {},
       description,
       toolContext.bookDir,
+      agentDefinitions,
     )
     let currentMessages = [...messages]
 
-    for (let turn = 0; turn < maxTurns; turn++) {
+    for (let turn = 0; ; turn++) {
+      if (maxTurns && turn >= maxTurns) {
+        yield {
+          type: 'error',
+          message: `已达到最大对话轮次（${maxTurns}轮），Agent 已停止。如需继续，请发送新消息。`,
+        }
+        return
+      }
       if (signal?.aborted) {
         yield { type: 'aborted' }
         return
@@ -229,10 +239,5 @@ export class AgentLoop {
       currentMessages = [...currentMessages, { role: 'user', content: toolResultBlocks }]
     }
 
-    // 达到最大轮次
-    yield {
-      type: 'error',
-      message: `已达到最大对话轮次（${maxTurns}轮），Agent 已停止。如需继续，请发送新消息。`,
-    }
   }
 }

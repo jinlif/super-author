@@ -97,10 +97,22 @@ export interface ConversationSummary {
   updatedAt: string
 }
 
+// Agent 定义（从 .md 文件加载）
+
+export interface AgentDefinition {
+  name: string
+  description: string
+  model?: string
+  maxTurns?: number
+  tools?: string[]
+  systemPrompt: string
+}
+
 // SubAgent 输入
 
 export interface SubAgentInput {
   prompt: string
   model?: string
   maxTurns?: number
+  subagent_type?: string
 }

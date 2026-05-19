@@ -42,6 +42,7 @@ describe('SubAgentTool 事件透传', () => {
         models: ['mock-model'],
       }),
       getRegistry: () => registry,
+      getAgentDefinitions: () => [],
     })
 
     const collectedEvents: AgentUIEvent[] = []
