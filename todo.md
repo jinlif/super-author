@@ -20,10 +20,6 @@
 
 ## 当前：Phase 3.9
 
-> 3.8 已全部完成
-
-### 3.9c 文件操作授权 + Diff 视图 ✅
-
 ### 3.9e setting模型配置保存和加载功能
 
 src\presentation\settings\SettingsPanel.tsx 目前模型配置只能被覆盖，用户可能有不同的模型设置需求。

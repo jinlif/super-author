@@ -427,6 +427,9 @@
   caret-color: #e0e0e0;
   padding: 10px 12px;
   font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  word-spacing: normal;
   resize: none;
   outline: none;
   font-family: inherit;
@@ -472,6 +475,9 @@
   overflow: hidden;
   font-family: inherit;
   font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  word-spacing: normal;
   line-height: 1.5;
   border-radius: 8px;
   word-break: break-all;
