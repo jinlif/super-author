@@ -3,7 +3,7 @@ import type { CustomCommand } from '../domain/types/command'
 import type { IFileService } from './IFileService'
 
 /** 解析命令 .md 文件：frontmatter + body */
-function parseCommandFile(content: string): CustomCommand | null {
+export function parseCommandFile(content: string): CustomCommand | null {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/)
   if (!match) return null
   const frontmatter = match[1]
