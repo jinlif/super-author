@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import type { AgentMessage, AgentUIEvent, ConversationSummary, ProviderConfig } from '../../domain/types/agent'
+import type { AgentDefinition, AgentMessage, AgentUIEvent, ConversationSummary, ProviderConfig } from '../../domain/types/agent'
 import type { ToolContext } from '../../domain/types/tool'
+import { loadBuiltinAgents } from '../../infrastructure/builtinAgents'
 import { ConfigService } from '../../infrastructure/ConfigService'
 import { createFileService } from '../../infrastructure/createFileService'
 import type { IFileService } from '../../infrastructure/IFileService'
@@ -59,6 +60,7 @@ interface AgentStore {
   error: string | null
   conversationId: string | null
   providerConfig: ProviderConfig
+  agentDefinitions: AgentDefinition[]
   tempChapterData: { title: string; content: string } | null
   conversationHistory: ConversationSummary[]
   pendingTool: {
@@ -92,6 +94,7 @@ interface AgentStore {
   init: () => Promise<void>
   initRegistry: (bookDir: string) => Promise<void>
   reloadCommands: (bookDir: string) => Promise<void>
+  loadAgents: (bookDir?: string) => Promise<void>
   sendMessage: (
     text: string,
     currentChapterContent?: string,
@@ -130,6 +133,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   error: null,
   conversationId: null,
   providerConfig: defaultProviderConfig,
+  agentDefinitions: [],
   tempChapterData: null,
   conversationHistory: [],
   pendingTool: null,
@@ -201,6 +205,37 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     registry.registerCustom(commands)
   },
 
+  loadAgents: async (bookDir?: string) => {
+    const state = get()
+    let configService = state._configService
+    let homeDir = state._homeDir
+    if (!configService) {
+      homeDir = await state._fs.getHomeDir()
+      configService = new ConfigService(state._fs, homeDir)
+      set({ _homeDir: homeDir, _configService: configService })
+    }
+    if (!homeDir) {
+      homeDir = await state._fs.getHomeDir()
+    }
+
+    // 优先级：书籍级 > 内置 > 用户级
+    const dirs: string[] = []
+    if (bookDir) dirs.push(`${bookDir}/.super-author/agents`)
+    dirs.push(`${homeDir}/.agents/agents`)
+    dirs.push(`${homeDir}/.superauthor/agents`)
+
+    const validModels = state.providerConfig.models
+    const dirAgents = await configService.loadAgentsFromDirs(dirs, validModels)
+
+    // 内置 agents 作为兜底，同名被书籍级/用户级覆盖
+    const builtinAgents = loadBuiltinAgents()
+    const agentMap = new Map<string, AgentDefinition>()
+    for (const agent of builtinAgents) agentMap.set(agent.name, agent)
+    for (const agent of dirAgents) agentMap.set(agent.name, agent)
+
+    set({ agentDefinitions: Array.from(agentMap.values()) })
+  },
+
   initRegistry: async (bookDir: string) => {
     const state = get()
     const registry = new ToolRegistry()
@@ -221,6 +256,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       createSubAgentTool({
         getProviderConfig: () => get().providerConfig,
         getRegistry: () => registry,
+        getAgentDefinitions: () => get().agentDefinitions,
       }),
     )
 
@@ -358,6 +394,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         bookMeta,
         dirDescriptions,
         description,
+        agentDefinitions: state.agentDefinitions,
         signal: controller.signal,
         onUserInput: (_toolName, _input) => {
           return new Promise<Record<string, unknown> | null>((resolve) => {
