@@ -30,21 +30,24 @@ export interface AgentMessage {
 
 // Provider 配置
 
-export interface ModelConfig {
-  maxTokens?: number
+export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+
+export interface ModelsItem {
+  modelName: string
+  maxTokens: number
+  thinkingMode: boolean
+  effort: EffortLevel
 }
 
 export interface ProviderConfig {
-  id: 'claude' | 'openai'
+  id: 'anthropic' | 'openai'
   name: string
   apiKey: string
   model: string
-  models: string[]
+  models: ModelsItem[]
   baseUrl?: string
-  maxTokens?: number
   temperature?: number
-  thinkingMode?: boolean
-  modelsConfig?: Record<string, ModelConfig>
+  presetName?: string
 }
 
 // 流式事件（Provider → AgentLoop）

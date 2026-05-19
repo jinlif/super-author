@@ -1,22 +1,34 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAgentStore } from '../../application/stores/agentStore'
-import type { ModelConfig, ProviderConfig } from '../../domain/types/agent'
+import type { EffortLevel, ModelsItem, ProviderConfig } from '../../domain/types/agent'
 import './SettingsPanel.css'
 
-const PROVIDER_DEFAULTS: Record<string, Partial<ProviderConfig>> = {
-  claude: {
-    name: 'Claude',
+const PROVIDER_DEFAULTS: Record<string, { name: string; model: string; models: ModelsItem[] }> = {
+  anthropic: {
+    name: 'Anthropic',
     model: 'claude-sonnet-4-20250514',
-    models: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514'],
-    modelsConfig: {},
+    models: [
+      { modelName: 'claude-sonnet-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+      { modelName: 'claude-opus-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+    ],
   },
   openai: {
     name: 'OpenAI',
     model: 'gpt-4o',
-    models: ['gpt-4o', 'gpt-4o-mini'],
-    modelsConfig: {},
+    models: [
+      { modelName: 'gpt-4o', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+      { modelName: 'gpt-4o-mini', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+    ],
   },
 }
+
+const EFFORT_OPTIONS: { value: EffortLevel; label: string }[] = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'xhigh', label: 'XHigh' },
+  { value: 'max', label: 'Max' },
+]
 
 const TOKEN_MAX = 1_000_000
 
@@ -41,9 +53,6 @@ export function SettingsPanel() {
       <ApiSection config={providerConfig} setProviderConfig={setProviderConfig} />
       <ModelSection config={providerConfig} setProviderConfig={setProviderConfig} />
       <ParameterSection config={providerConfig} setProviderConfig={setProviderConfig} />
-      {providerConfig.id === 'claude' && (
-        <ThinkingSection config={providerConfig} setProviderConfig={setProviderConfig} />
-      )}
     </div>
   )
 }
@@ -55,9 +64,31 @@ function ProviderSection({
   config: ProviderConfig
   setProviderConfig: (c: Partial<ProviderConfig>) => void
 }) {
-  const handleChange = useCallback(
+  const loadPresets = useAgentStore((s) => s.loadPresets)
+  const savePreset = useAgentStore((s) => s.savePreset)
+  const deletePreset = useAgentStore((s) => s.deletePreset)
+  const loadPreset = useAgentStore((s) => s.loadPreset)
+
+  const [presets, setPresets] = useState<Record<string, ProviderConfig>>({})
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [presetName, setPresetName] = useState('')
+
+  useEffect(() => {
+    loadPresets().then(setPresets)
+  }, [loadPresets])
+
+  const handleProviderChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newId = e.target.value as 'claude' | 'openai'
+      const value = e.target.value
+      // 如果选择的是预设
+      if (value.startsWith('preset:')) {
+        const name = value.slice(7)
+        loadPreset(name).then(() => {
+          loadPresets().then(setPresets)
+        })
+        return
+      }
+      const newId = value as 'anthropic' | 'openai'
       const defaults = PROVIDER_DEFAULTS[newId]
       setProviderConfig({
         id: newId,
@@ -65,22 +96,103 @@ function ProviderSection({
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,
         temperature: undefined,
-        maxTokens: undefined,
-        modelsConfig: config.modelsConfig,
-        thinkingMode: newId === 'claude' ? config.thinkingMode : false,
+        presetName: undefined,
       })
     },
-    [setProviderConfig, config.apiKey, config.baseUrl, config.thinkingMode, config.modelsConfig],
+    [setProviderConfig, config.apiKey, config.baseUrl, loadPreset, loadPresets],
   )
+
+  const handleSavePreset = useCallback(async () => {
+    const name = presetName.trim()
+    if (!name) return
+    if (!config.apiKey) {
+      alert('请先填写 API Key')
+      return
+    }
+    if (config.models.length === 0) {
+      alert('请先添加至少一个模型')
+      return
+    }
+    await savePreset(name)
+    const updated = await loadPresets()
+    setPresets(updated)
+    setShowSaveDialog(false)
+    setPresetName('')
+  }, [presetName, config.apiKey, config.models.length, savePreset, loadPresets])
+
+  const handleDeletePreset = useCallback(
+    async (name: string) => {
+      await deletePreset(name)
+      const updated = await loadPresets()
+      setPresets(updated)
+      if (config.presetName === name) {
+        setProviderConfig({ presetName: undefined })
+      }
+    },
+    [deletePreset, loadPresets, config.presetName, setProviderConfig],
+  )
+
+  const presetNames = Object.keys(presets)
 
   return (
     <div className="settings-section">
       <div className="settings-section-title">Provider</div>
       <label className="settings-label">AI Provider</label>
-      <select className="settings-select" value={config.id} onChange={handleChange}>
-        <option value="claude">Claude (Anthropic)</option>
-        <option value="openai">OpenAI</option>
+      <select className="settings-select" value={config.presetName ? `preset:${config.presetName}` : config.id} onChange={handleProviderChange}>
+        <optgroup label="内置">
+          <option value="anthropic">Anthropic Compatible</option>
+          <option value="openai">OpenAI Compatible</option>
+        </optgroup>
+        {presetNames.length > 0 && (
+          <optgroup label="已保存的配置">
+            {presetNames.map((name) => (
+              <option key={name} value={`preset:${name}`}>
+                {name}
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
+      <div className="settings-row" style={{ marginTop: 8 }}>
+        {showSaveDialog ? (
+          <>
+            <input
+              type="text"
+              className="settings-input"
+              placeholder="输入配置名称"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSavePreset()
+                if (e.key === 'Escape') setShowSaveDialog(false)
+              }}
+            />
+            <button type="button" className="settings-btn settings-btn-primary" onClick={handleSavePreset}>
+              保存
+            </button>
+            <button type="button" className="settings-btn" onClick={() => setShowSaveDialog(false)}>
+              取消
+            </button>
+          </>
+        ) : (
+          <button type="button" className="settings-btn settings-btn-primary" onClick={() => setShowSaveDialog(true)}>
+            保存为配置
+          </button>
+        )}
+      </div>
+      {config.presetName && (
+        <div className="settings-row" style={{ marginTop: 4 }}>
+          <span className="settings-hint">当前预设: {config.presetName}</span>
+          <button
+            type="button"
+            className="settings-btn"
+            style={{ color: '#f87171' }}
+            onClick={() => handleDeletePreset(config.presetName!)}
+          >
+            删除预设
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -126,8 +238,7 @@ function ApiSection({
 }) {
   const [showKey, setShowKey] = useState(false)
 
-  const placeholder =
-    config.id === 'claude' ? 'https://api.anthropic.com' : 'https://api.openai.com'
+  const placeholder = config.id === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com'
 
   return (
     <div className="settings-section">
@@ -174,63 +285,52 @@ function ModelSection({
   setProviderConfig: (c: Partial<ProviderConfig>) => void
 }) {
   const [newModel, setNewModel] = useState('')
-  const modelsConfig = config.modelsConfig ?? {}
 
   const handleAdd = useCallback(() => {
     const name = newModel.trim()
-    if (!name || config.models.includes(name)) return
-    setProviderConfig({ models: [...config.models, name] })
+    if (!name || config.models.some((m) => m.modelName === name)) return
+    const newItem: ModelsItem = { modelName: name, maxTokens: 8192, thinkingMode: false, effort: 'high' }
+    setProviderConfig({ models: [...config.models, newItem] })
     setNewModel('')
   }, [newModel, config.models, setProviderConfig])
 
   const handleRemove = useCallback(
-    (model: string) => {
-      const next = config.models.filter((m) => m !== model)
+    (modelName: string) => {
+      const next = config.models.filter((m) => m.modelName !== modelName)
       if (next.length === 0) return
       const update: Partial<ProviderConfig> = { models: next }
-      if (config.model === model) {
-        update.model = next[0]
-      }
-      // 清理被删除模型的配置
-      if (modelsConfig[model]) {
-        const nextConfig = { ...modelsConfig }
-        delete nextConfig[model]
-        update.modelsConfig = nextConfig
+      if (config.model === modelName) {
+        update.model = next[0].modelName
       }
       setProviderConfig(update)
     },
-    [config.models, config.model, modelsConfig, setProviderConfig],
+    [config.models, config.model, setProviderConfig],
   )
 
   const handleActivate = useCallback(
-    (model: string) => {
-      setProviderConfig({ model })
+    (modelName: string) => {
+      setProviderConfig({ model: modelName })
     },
     [setProviderConfig],
   )
 
-  const handleMaxTokensChange = useCallback(
-    (model: string, value: number) => {
-      const clamped = clampToken(value)
-      const nextConfig: Record<string, ModelConfig> = {
-        ...modelsConfig,
-        [model]: { ...modelsConfig[model], maxTokens: clamped },
-      }
-      const update: Partial<ProviderConfig> = { modelsConfig: nextConfig }
-      if (model === config.model) {
-        update.maxTokens = clamped
-      }
-      setProviderConfig(update)
+  const handleModelFieldChange = useCallback(
+    (modelName: string, field: keyof ModelsItem, value: ModelsItem[keyof ModelsItem]) => {
+      const next = config.models.map((m) =>
+        m.modelName === modelName ? { ...m, [field]: value } : m,
+      )
+      setProviderConfig({ models: next })
     },
-    [modelsConfig, config.model, setProviderConfig],
+    [config.models, setProviderConfig],
   )
 
   const handleMaxTokensStep = useCallback(
-    (model: string, delta: number) => {
-      const current = modelsConfig[model]?.maxTokens ?? 8192
-      handleMaxTokensChange(model, current + delta)
+    (modelName: string, delta: number) => {
+      const model = config.models.find((m) => m.modelName === modelName)
+      const current = model?.maxTokens ?? 8192
+      handleModelFieldChange(modelName, 'maxTokens', clampToken(current + delta))
     },
-    [modelsConfig, handleMaxTokensChange],
+    [config.models, handleModelFieldChange],
   )
 
   return (
@@ -241,59 +341,94 @@ function ModelSection({
       </label>
       <div className="model-list">
         {config.models.map((m) => {
-          const maxTokens = modelsConfig[m]?.maxTokens ?? 8192
-          const display = getTokenDisplay(maxTokens)
+          const display = getTokenDisplay(m.maxTokens)
           return (
             <div
-              key={m}
-              className={`model-item ${m === config.model ? 'active' : ''}`}
-              onClick={() => handleActivate(m)}
+              key={m.modelName}
+              className={`model-item ${m.modelName === config.model ? 'active' : ''}`}
+              onClick={() => handleActivate(m.modelName)}
             >
-              <span className="model-item-name">{m}</span>
-              <div className="model-item-tokens" onClick={(e) => e.stopPropagation()}>
+              <div className="model-item-header">
+                <span className="model-item-name">{m.modelName}</span>
                 <button
                   type="button"
-                  className="stepper-btn"
-                  onClick={() => handleMaxTokensStep(m, -1000)}
-                  disabled={maxTokens <= 256}
-                >
-                  −
-                </button>
-                <input
-                  type="text"
-                  className="stepper-input stepper-input-token"
-                  value={display.num}
-                  onChange={(e) => {
-                    const num = Number(e.target.value)
-                    if (!Number.isNaN(num)) {
-                      const multiplier = display.unit === 'M' ? 1_000_000 : 1000
-                      handleMaxTokensChange(m, num * multiplier)
-                    }
+                  className="model-item-delete"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleRemove(m.modelName)
                   }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span className="model-item-unit">{display.unit}</span>
-                <button
-                  type="button"
-                  className="stepper-btn"
-                  onClick={() => handleMaxTokensStep(m, 1000)}
-                  disabled={maxTokens >= TOKEN_MAX}
+                  disabled={config.models.length <= 1}
+                  title="删除模型"
                 >
-                  +
+                  x
                 </button>
               </div>
-              <button
-                type="button"
-                className="model-item-delete"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleRemove(m)
-                }}
-                disabled={config.models.length <= 1}
-                title="删除模型"
-              >
-                x
-              </button>
+              <div className="model-item-config" onClick={(e) => e.stopPropagation()}>
+                <div className="model-item-row">
+                  <span className="model-item-label">Max Tokens</span>
+                  <div className="model-item-tokens">
+                    <button
+                      type="button"
+                      className="stepper-btn"
+                      onClick={() => handleMaxTokensStep(m.modelName, -1000)}
+                      disabled={m.maxTokens <= 256}
+                    >
+                      -
+                    </button>
+                    <input
+                      type="text"
+                      className="stepper-input stepper-input-token"
+                      value={display.num}
+                      onChange={(e) => {
+                        const num = Number(e.target.value)
+                        if (!Number.isNaN(num)) {
+                          const multiplier = display.unit === 'M' ? 1_000_000 : 1000
+                          handleModelFieldChange(m.modelName, 'maxTokens', clampToken(num * multiplier))
+                        }
+                      }}
+                    />
+                    <span className="model-item-unit">{display.unit}</span>
+                    <button
+                      type="button"
+                      className="stepper-btn"
+                      onClick={() => handleMaxTokensStep(m.modelName, 1000)}
+                      disabled={m.maxTokens >= TOKEN_MAX}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div className="model-item-row">
+                  <span className="model-item-label">Thinking</span>
+                  <div
+                    className={`toggle-switch ${m.thinkingMode ? 'active' : ''}`}
+                    onClick={() => handleModelFieldChange(m.modelName, 'thinkingMode', !m.thinkingMode)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleModelFieldChange(m.modelName, 'thinkingMode', !m.thinkingMode)
+                      }
+                    }}
+                  />
+                </div>
+                {m.thinkingMode && (
+                  <div className="model-item-row">
+                    <span className="model-item-label">Effort</span>
+                    <select
+                      className="model-item-select"
+                      value={m.effort}
+                      onChange={(e) => handleModelFieldChange(m.modelName, 'effort', e.target.value as EffortLevel)}
+                    >
+                      {EFFORT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
           )
         })}
@@ -342,41 +477,6 @@ function ParameterSection({
         <span className="settings-range-value">{(config.temperature ?? 0.7).toFixed(1)}</span>
       </div>
       <span className="settings-hint">范围 0-2，默认 0.7</span>
-    </div>
-  )
-}
-
-function ThinkingSection({
-  config,
-  setProviderConfig,
-}: {
-  config: ProviderConfig
-  setProviderConfig: (c: Partial<ProviderConfig>) => void
-}) {
-  const enabled = config.thinkingMode ?? false
-
-  const toggle = useCallback(() => {
-    setProviderConfig({ thinkingMode: !enabled })
-  }, [enabled, setProviderConfig])
-
-  return (
-    <div className="settings-section">
-      <div className="settings-section-title">Thinking Mode</div>
-      <div className="settings-row">
-        <div
-          className={`toggle-switch ${enabled ? 'active' : ''}`}
-          onClick={toggle}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') toggle()
-          }}
-        />
-        <span className="settings-label" style={{ marginBottom: 0 }}>
-          {enabled ? '已启用' : '已禁用'}
-        </span>
-      </div>
-      <span className="settings-hint">启用扩展思考模式</span>
     </div>
   )
 }

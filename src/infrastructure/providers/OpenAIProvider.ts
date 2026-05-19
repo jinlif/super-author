@@ -2,11 +2,27 @@ import OpenAI from "openai";
 import type {
   AgentMessage,
   AgentStreamEvent,
+  EffortLevel,
   ProviderConfig,
   ToolResultContentBlock,
 } from "../../domain/types/agent";
 import type { IProvider } from "./IProvider";
 import { tauriFetch } from "./tauriFetch";
+
+function getActiveModel(config: ProviderConfig) {
+  return config.models.find((m) => m.modelName === config.model) ?? config.models[0]
+}
+
+function mapEffortToOpenAI(effort: EffortLevel): 'low' | 'medium' | 'high' {
+  const map: Record<EffortLevel, 'low' | 'medium' | 'high'> = {
+    low: 'low',
+    medium: 'medium',
+    high: 'high',
+    xhigh: 'high',
+    max: 'high',
+  }
+  return map[effort] ?? 'high'
+}
 
 type OpenAIMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
@@ -144,6 +160,11 @@ export class OpenAIProvider implements IProvider {
     const apiTools = convertTools(tools);
     const apiMessages = convertMessages(messages);
 
+    const activeModel = getActiveModel(this.config)
+    const thinkingMode = activeModel?.thinkingMode ?? false
+    const effort = activeModel?.effort ?? 'high'
+    const modelMaxTokens = activeModel?.maxTokens ?? 8192
+
     const baseParams = {
       model: this.model,
       messages: [
@@ -157,11 +178,15 @@ export class OpenAIProvider implements IProvider {
 
     const params = {
       ...baseParams,
-      ...(this.config.maxTokens !== undefined
-        ? { max_tokens: this.config.maxTokens }
-        : {}),
+      max_tokens: modelMaxTokens,
       ...(this.config.temperature !== undefined
         ? { temperature: this.config.temperature }
+        : {}),
+      ...(thinkingMode
+        ? {
+            reasoning_effort: mapEffortToOpenAI(effort),
+            extra_body: { thinking: { type: "enabled" as const } },
+          }
         : {}),
     };
 

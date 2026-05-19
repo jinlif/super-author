@@ -2,11 +2,20 @@ import Anthropic from "@anthropic-ai/sdk";
 import type {
   AgentMessage,
   AgentStreamEvent,
+  EffortLevel,
   ProviderConfig,
   ToolResultContentBlock,
 } from "../../domain/types/agent";
 import type { IProvider } from "./IProvider";
 import { tauriFetch } from "./tauriFetch";
+
+function getActiveModel(config: ProviderConfig) {
+  return config.models.find((m) => m.modelName === config.model) ?? config.models[0]
+}
+
+function mapEffortToAnthropic(effort: EffortLevel): 'low' | 'medium' | 'high' | 'xhigh' | 'max' {
+  return effort
+}
 
 function convertMessages(messages: AgentMessage[]): Anthropic.MessageParam[] {
   return messages.map((msg) => {
@@ -88,7 +97,7 @@ function convertTools(
 }
 
 export class ClaudeProvider implements IProvider {
-  readonly id = "claude";
+  readonly id = "anthropic";
   readonly model: string;
   private client: Anthropic;
   private config: ProviderConfig;
@@ -114,9 +123,14 @@ export class ClaudeProvider implements IProvider {
     }[],
     signal?: AbortSignal,
   ): AsyncGenerator<AgentStreamEvent> {
-    const maxTokens = this.config.thinkingMode
-      ? Math.max(this.config.maxTokens ?? 8192, 17000)
-      : (this.config.maxTokens ?? 8192);
+    const activeModel = getActiveModel(this.config)
+    const thinkingMode = activeModel?.thinkingMode ?? false
+    const effort = activeModel?.effort ?? 'high'
+    const modelMaxTokens = activeModel?.maxTokens ?? 8192
+
+    const maxTokens = thinkingMode
+      ? Math.max(modelMaxTokens, 17000)
+      : modelMaxTokens;
 
     const baseParams = {
       model: this.model,
@@ -127,13 +141,16 @@ export class ClaudeProvider implements IProvider {
       stream: true as const,
     };
 
-    const params = {
+    const params: Anthropic.MessageCreateParams = {
       ...baseParams,
       ...(this.config.temperature !== undefined
         ? { temperature: this.config.temperature }
         : {}),
-      ...(this.config.thinkingMode
-        ? { thinking: { type: "enabled" as const, budget_tokens: 16000 } }
+      ...(thinkingMode
+        ? {
+            thinking: { type: "enabled" as const, budget_tokens: 16000 },
+            output_config: { effort: mapEffortToAnthropic(effort) },
+          }
         : {}),
     };
 

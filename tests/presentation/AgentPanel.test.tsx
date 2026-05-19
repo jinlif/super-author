@@ -38,11 +38,11 @@ describe('AgentPanel', () => {
       conversationId: null,
       currentTurn: 0,
       providerConfig: {
-        id: 'claude',
-        name: 'Claude',
+        id: 'anthropic',
+        name: 'Anthropic',
         apiKey: '',
         model: 'claude-sonnet-4-20250514',
-        models: ['claude-sonnet-4-20250514'],
+        models: [{ modelName: 'claude-sonnet-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' }],
       },
       _abortController: null,
       tempChapterData: null,
@@ -56,7 +56,7 @@ describe('AgentPanel', () => {
 
   it('应显示 Provider 标签', () => {
     render(React.createElement(AgentPanel))
-    expect(screen.getByText(/Claude · claude-sonnet-4-20250514/)).toBeTruthy()
+    expect(screen.getByText(/Anthropic · claude-sonnet-4-20250514/)).toBeTruthy()
   })
 
   it('应显示占位文字', () => {

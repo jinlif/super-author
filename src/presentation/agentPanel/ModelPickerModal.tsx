@@ -13,8 +13,8 @@ export function ModelPickerModal({ visible, onClose }: ModelPickerModalProps) {
   const setProviderConfig = useAgentStore((s) => s.setProviderConfig)
 
   const handleSelect = useCallback(
-    (model: string) => {
-      setProviderConfig({ model })
+    (modelName: string) => {
+      setProviderConfig({ model: modelName })
       onClose()
     },
     [setProviderConfig, onClose],
@@ -50,12 +50,12 @@ export function ModelPickerModal({ visible, onClose }: ModelPickerModalProps) {
         <div className="model-picker-list">
           {models.map((m) => (
             <div
-              key={m}
-              className={`model-picker-item ${m === activeModel ? 'active' : ''}`}
-              onClick={() => handleSelect(m)}
+              key={m.modelName}
+              className={`model-picker-item ${m.modelName === activeModel ? 'active' : ''}`}
+              onClick={() => handleSelect(m.modelName)}
             >
-              <span>{m}</span>
-              {m === activeModel && <span className="model-picker-check">{'✓'}</span>}
+              <span>{m.modelName}</span>
+              {m.modelName === activeModel && <span className="model-picker-check">{'✓'}</span>}
             </div>
           ))}
         </div>

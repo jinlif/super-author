@@ -10,11 +10,11 @@ describe('agentStore', () => {
       error: null,
       conversationId: null,
       providerConfig: {
-        id: 'claude',
-        name: 'Claude',
+        id: 'anthropic',
+        name: 'Anthropic',
         apiKey: 'sk-test',
         model: 'claude-sonnet-4-20250514',
-        models: ['claude-sonnet-4-20250514'],
+        models: [{ modelName: 'claude-sonnet-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' }],
       },
       _abortController: null,
       tempChapterData: null,
@@ -44,7 +44,7 @@ describe('agentStore', () => {
     useAgentStore.getState().setProviderConfig({ model: 'claude-opus-4-7' })
     const config = useAgentStore.getState().providerConfig
     expect(config.model).toBe('claude-opus-4-7')
-    expect(config.id).toBe('claude') // 未覆盖字段不变
+    expect(config.id).toBe('anthropic') // 未覆盖字段不变
   })
 
   it('加载已有对话', () => {
@@ -56,7 +56,7 @@ describe('agentStore', () => {
       name: 'OpenAI',
       apiKey: 'sk-xxx',
       model: 'gpt-4o',
-      models: ['gpt-4o'],
+      models: [{ modelName: 'gpt-4o', maxTokens: 8192, thinkingMode: false, effort: 'high' }],
     })
     const state = useAgentStore.getState()
     expect(state.conversationId).toBe('conv-1')
@@ -66,7 +66,7 @@ describe('agentStore', () => {
 
   it('apiKey 为空不应发送消息', async () => {
     useAgentStore.setState({
-      providerConfig: { id: 'claude', name: 'Claude', apiKey: '', model: '', models: [] },
+      providerConfig: { id: 'anthropic', name: 'Anthropic', apiKey: '', model: '', models: [] },
     })
     await useAgentStore.getState().sendMessage('测试')
     expect(useAgentStore.getState().error).toBe('请先配置 API Key')

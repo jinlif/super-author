@@ -106,6 +106,10 @@ interface AgentStore {
   resolvePending: (result: Record<string, unknown> | null) => void
   clearConversation: () => void
   setProviderConfig: (config: Partial<ProviderConfig>) => void
+  loadPresets: () => Promise<Record<string, ProviderConfig>>
+  savePreset: (name: string) => Promise<void>
+  deletePreset: (name: string) => Promise<void>
+  loadPreset: (name: string) => Promise<void>
   loadConversation: (
     conversationId: string,
     messages: AgentMessage[],
@@ -120,12 +124,14 @@ interface AgentStore {
 }
 
 const defaultProviderConfig: ProviderConfig = {
-  id: 'claude',
-  name: 'Claude',
+  id: 'anthropic',
+  name: 'Anthropic',
   apiKey: '',
   model: 'claude-sonnet-4-20250514',
-  models: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514'],
-  modelsConfig: {},
+  models: [
+    { modelName: 'claude-sonnet-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+    { modelName: 'claude-opus-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+  ],
 }
 
 export const useAgentStore = create<AgentStore>((set, get) => ({
@@ -183,13 +189,6 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       })
     }
     const provider = await configService.loadProviderConfig()
-    // 同步当前模型的 maxTokens 到全局字段
-    if (provider.model && provider.modelsConfig) {
-      const modelCfg = provider.modelsConfig[provider.model]
-      if (modelCfg?.maxTokens != null) {
-        provider.maxTokens = modelCfg.maxTokens
-      }
-    }
     set({ providerConfig: provider })
   },
 
@@ -233,7 +232,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     dirs.push(`${homeDir}/.agents/agents`)
     dirs.push(`${homeDir}/.superauthor/agents`)
 
-    const validModels = state.providerConfig.models
+    const validModels = state.providerConfig.models.map((m) => m.modelName)
     const dirAgents = await configService.loadAgentsFromDirs(dirs, validModels)
 
     // 内置 agents 作为兜底，同名被书籍级/用户级覆盖
@@ -801,16 +800,42 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   setProviderConfig: (config) => {
     const state = get()
     const updated = { ...state.providerConfig, ...config }
-    // 切换模型时，同步该模型的 maxTokens 到全局字段
-    if (config.model && updated.modelsConfig) {
-      const modelCfg = updated.modelsConfig[config.model]
-      updated.maxTokens = modelCfg?.maxTokens
-    }
     set({ providerConfig: updated })
     // 持久化配置
     const configService = state._configService
     if (configService) {
       configService.saveProviderConfig(updated)
+    }
+  },
+
+  loadPresets: async () => {
+    const configService = get()._configService
+    if (!configService) return {}
+    return configService.loadPresets()
+  },
+
+  savePreset: async (name: string) => {
+    const state = get()
+    const configService = state._configService
+    if (!configService) return
+    await configService.savePreset(name, state.providerConfig)
+    set({ providerConfig: { ...state.providerConfig, presetName: name } })
+  },
+
+  deletePreset: async (name: string) => {
+    const configService = get()._configService
+    if (!configService) return
+    await configService.deletePreset(name)
+  },
+
+  loadPreset: async (name: string) => {
+    const configService = get()._configService
+    if (!configService) return
+    const presets = await configService.loadPresets()
+    const preset = presets[name]
+    if (preset) {
+      set({ providerConfig: { ...preset, presetName: name } })
+      await configService.saveProviderConfig({ ...preset, presetName: name })
     }
   },
 
@@ -832,12 +857,14 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     if (conversationStore && bookStore.currentBook) {
       const conversation = await conversationStore.load(bookStore.currentBook.directory, id)
       if (conversation) {
+        // 迁移旧 providerId
+        const providerId = conversation.providerId === 'claude' ? 'anthropic' : conversation.providerId
         set({
           messages: conversation.messages,
           conversationId: id,
           providerConfig: {
             ...state.providerConfig,
-            id: conversation.providerId as ProviderConfig['id'],
+            id: providerId as ProviderConfig['id'],
             model: conversation.modelId,
           },
           error: null,

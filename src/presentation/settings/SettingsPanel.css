@@ -223,21 +223,70 @@
 .model-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 150px;
+  gap: 4px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
 .model-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.65);
   transition: all 0.12s ease;
+}
+
+.model-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-item-config {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.model-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-item-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.model-item-select {
+  height: 22px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  padding: 0 24px 0 6px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L4 4L7 1' stroke='%23666' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+.model-item-select:focus {
+  border-color: #3b82f6;
 }
 
 .model-item-name {

@@ -6,10 +6,11 @@ import { OpenAIProvider } from '../../src/infrastructure/providers/OpenAIProvide
 describe('createProvider', () => {
   it('应该创建 ClaudeProvider', () => {
     const provider = createProvider({
-      id: 'claude',
-      name: 'Claude',
+      id: 'anthropic',
+      name: 'Anthropic',
       apiKey: 'sk-test',
       model: 'claude-sonnet-4-20250514',
+      models: [{ modelName: 'claude-sonnet-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' }],
     })
     expect(provider).toBeInstanceOf(ClaudeProvider)
   })
@@ -20,6 +21,7 @@ describe('createProvider', () => {
       name: 'OpenAI',
       apiKey: 'sk-test',
       model: 'gpt-4o',
+      models: [{ modelName: 'gpt-4o', maxTokens: 8192, thinkingMode: false, effort: 'high' }],
     })
     expect(provider).toBeInstanceOf(OpenAIProvider)
   })
@@ -27,10 +29,11 @@ describe('createProvider', () => {
   it('未知 provider 应该抛出错误', () => {
     expect(() =>
       createProvider({
-        id: 'unknown' as 'claude',
+        id: 'unknown' as 'anthropic',
         name: 'Unknown',
         apiKey: '',
         model: '',
+        models: [],
       }),
     ).toThrow('Unknown provider: unknown')
   })

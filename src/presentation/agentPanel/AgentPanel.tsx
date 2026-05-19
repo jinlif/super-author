@@ -44,7 +44,7 @@ export function AgentPanel() {
   if (!visible) return null
 
   const isRight = position === 'right'
-  const providerName = providerConfig.id === 'claude' ? 'Claude' : 'OpenAI'
+  const providerName = providerConfig.id === 'anthropic' ? 'Anthropic' : 'OpenAI'
 
   const handleLoadHistory = (id: string) => {
     loadConversationFromHistory(id)

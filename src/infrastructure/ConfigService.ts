@@ -1,4 +1,4 @@
-import type { AgentDefinition, ProviderConfig } from '../domain/types/agent'
+import type { AgentDefinition, ModelsItem, ProviderConfig } from '../domain/types/agent'
 import type { CustomCommand } from '../domain/types/command'
 import type { IFileService } from './IFileService'
 
@@ -64,11 +64,14 @@ export interface AppConfig {
 }
 
 const defaultProviderConfig: ProviderConfig = {
-  id: 'claude',
-  name: 'Claude',
+  id: 'anthropic',
+  name: 'Anthropic',
   apiKey: '',
   model: 'claude-sonnet-4-20250514',
-  models: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514'],
+  models: [
+    { modelName: 'claude-sonnet-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+    { modelName: 'claude-opus-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+  ],
 }
 
 const defaultConfig: AppConfig = {
@@ -86,6 +89,8 @@ export class ConfigService {
   readonly historyDir: string
   /** ~/.superauthor/config.json */
   readonly configPath: string
+  /** ~/.superauthor/provider-presets.json */
+  readonly presetsPath: string
 
   private fs: IFileService
 
@@ -96,6 +101,7 @@ export class ConfigService {
     this.globalSkillsDir = `${this.homeDir}/skills`
     this.historyDir = `${this.homeDir}/history`
     this.configPath = `${this.homeDir}/config.json`
+    this.presetsPath = `${this.homeDir}/provider-presets.json`
   }
 
   async load(): Promise<AppConfig> {
@@ -103,13 +109,48 @@ export class ConfigService {
       if (await this.fs.exists(this.configPath)) {
         const raw = await this.fs.readFile(this.configPath)
         const parsed = JSON.parse(raw) as AppConfig
-        if (!parsed.provider.models) parsed.provider.models = [parsed.provider.model]
+        parsed.provider = this.migrateProviderConfig(parsed.provider)
         return parsed
       }
     } catch {
       // 忽略加载错误
     }
-    return { ...defaultConfig, provider: { ...defaultConfig.provider } }
+    return { ...defaultConfig, provider: { ...defaultConfig.provider, models: defaultConfig.provider.models.map(m => ({ ...m })) } }
+  }
+
+  /** 迁移旧格式 ProviderConfig 到新格式 */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private migrateProviderConfig(provider: any): ProviderConfig {
+    // 迁移 id: 'claude' → 'anthropic'
+    if (provider.id === 'claude') {
+      provider.id = 'anthropic'
+    }
+
+    // 迁移 models: string[] → ModelsItem[]
+    if (Array.isArray(provider.models) && provider.models.length > 0 && typeof provider.models[0] === 'string') {
+      const oldModels = provider.models as string[]
+      const oldModelsConfig = (provider.modelsConfig ?? {}) as Record<string, { maxTokens?: number }>
+      const oldThinkingMode = provider.thinkingMode as boolean | undefined
+
+      provider.models = oldModels.map((modelName: string): ModelsItem => ({
+        modelName,
+        maxTokens: oldModelsConfig[modelName]?.maxTokens ?? 8192,
+        thinkingMode: oldThinkingMode ?? false,
+        effort: 'high' as const,
+      }))
+
+      // 移除旧字段
+      delete provider.modelsConfig
+      delete provider.thinkingMode
+      delete provider.maxTokens
+    }
+
+    // 确保 models 不存在时有默认值
+    if (!provider.models || !Array.isArray(provider.models)) {
+      provider.models = defaultProviderConfig.models.map(m => ({ ...m }))
+    }
+
+    return provider as ProviderConfig
   }
 
   async save(config: AppConfig): Promise<void> {
@@ -129,6 +170,38 @@ export class ConfigService {
   async loadProviderConfig(): Promise<ProviderConfig> {
     const config = await this.load()
     return config.provider
+  }
+
+  async loadPresets(): Promise<Record<string, ProviderConfig>> {
+    try {
+      if (await this.fs.exists(this.presetsPath)) {
+        const raw = await this.fs.readFile(this.presetsPath)
+        return JSON.parse(raw) as Record<string, ProviderConfig>
+      }
+    } catch {
+      // 忽略加载错误
+    }
+    return {}
+  }
+
+  async savePreset(name: string, config: ProviderConfig): Promise<void> {
+    const presets = await this.loadPresets()
+    presets[name] = { ...config, presetName: name }
+    try {
+      await this.fs.writeFile(this.presetsPath, JSON.stringify(presets, null, 2))
+    } catch {
+      console.warn('保存预设失败')
+    }
+  }
+
+  async deletePreset(name: string): Promise<void> {
+    const presets = await this.loadPresets()
+    delete presets[name]
+    try {
+      await this.fs.writeFile(this.presetsPath, JSON.stringify(presets, null, 2))
+    } catch {
+      console.warn('删除预设失败')
+    }
   }
 
   /** 从指定目录自动加载 .md 命令文件 */

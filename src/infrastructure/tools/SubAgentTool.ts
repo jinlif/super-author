@@ -66,17 +66,14 @@ export function createSubAgentTool(deps: SubAgentToolDeps): ToolDef {
 
         // 准备 provider config
         const parentConfig = deps.getProviderConfig()
-        const config = { ...parentConfig }
+        const config = { ...parentConfig, models: [...parentConfig.models] }
         let effectiveModel = modelOverride ?? agentDef?.model
         // 若 agent 定义的模型不在 provider 模型列表中，回退到当前系统模型
-        if (effectiveModel && !parentConfig.models.includes(effectiveModel)) {
+        if (effectiveModel && !parentConfig.models.some((m) => m.modelName === effectiveModel)) {
           effectiveModel = undefined
         }
         if (effectiveModel) {
           config.model = effectiveModel
-          if (config.modelsConfig?.[effectiveModel]?.maxTokens) {
-            config.maxTokens = config.modelsConfig[effectiveModel].maxTokens
-          }
         }
 
         const provider = createProvider(config)
