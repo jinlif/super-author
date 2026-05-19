@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import type { AgentDefinition, AgentMessage, AgentUIEvent, ConversationSummary, ProviderConfig } from '../../domain/types/agent'
+import type { CustomCommand } from '../../domain/types/command'
 import type { ToolContext } from '../../domain/types/tool'
 import { loadBuiltinAgents } from '../../infrastructure/builtinAgents'
+import { loadBuiltinCommands } from '../../infrastructure/builtinCommands'
 import { ConfigService } from '../../infrastructure/ConfigService'
 import { createFileService } from '../../infrastructure/createFileService'
 import type { IFileService } from '../../infrastructure/IFileService'
@@ -200,9 +202,16 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       set({ _homeDir: homeDir, _configService: configService })
     }
     const commandsDir = `${bookDir}/.super-author/commands`
-    const commands = await configService.loadCommandsFromDir(commandsDir)
+    const bookCommands = await configService.loadCommandsFromDir(commandsDir)
+
+    // 合并内置命令与书籍级命令（书籍级同名覆盖内置）
+    const builtinCommands = loadBuiltinCommands()
+    const cmdMap = new Map<string, CustomCommand>()
+    for (const cmd of builtinCommands) cmdMap.set(cmd.name, cmd)
+    for (const cmd of bookCommands) cmdMap.set(cmd.name, cmd)
+
     const registry = get().commandRegistry
-    registry.registerCustom(commands)
+    registry.registerCustom(Array.from(cmdMap.values()))
   },
 
   loadAgents: async (bookDir?: string) => {
