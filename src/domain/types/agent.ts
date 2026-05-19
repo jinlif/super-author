@@ -25,6 +25,7 @@ export interface AssistantContentBlock {
 export interface AgentMessage {
   role: MessageRole
   content: (UserContentBlock | AssistantContentBlock | ToolResultContentBlock)[]
+  source?: 'main' | 'sub_agent'
 }
 
 // Provider 配置

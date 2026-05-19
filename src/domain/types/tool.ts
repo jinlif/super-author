@@ -1,10 +1,12 @@
 // 工具系统类型
 
 import type { IFileService } from '../../infrastructure/IFileService'
+import type { AgentUIEvent } from './agent'
 
 export interface ToolContext {
   fileService: IFileService
   bookDir: string
+  onSubAgentEvent?: (event: AgentUIEvent) => void
 }
 
 export type ToolHandler = (
