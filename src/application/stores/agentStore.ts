@@ -23,12 +23,27 @@ import { writeFileTool } from '../../infrastructure/tools/WriteFileTool'
 import { approvalTool } from '../../infrastructure/tools/ApprovalTool'
 import { askQuestionTool } from '../../infrastructure/tools/AskQuestionTool'
 import { AgentLoop } from '../agent/AgentLoop'
+import { generateTitle } from '../agent/generateTitle'
 import { CommandRegistry } from '../agent/CommandRegistry'
 import { ConversationStore } from '../agent/ConversationStore'
 import { ToolRegistry } from '../agent/ToolRegistry'
 import { useModelService } from '../services/ModelService'
 import { useBookStore } from './bookStore'
 import { useEditorStore } from './editorStore'
+
+function extractFirstUserText(messages: AgentMessage[]): string | null {
+  const firstUserMsg = messages.find(
+    (m) =>
+      m.role === 'user' &&
+      !m.content.some(
+        (b) => b.type === 'text' && (b as { type: 'text'; text: string }).text.includes('<system-reminder>'),
+      ),
+  )
+  const textBlock = firstUserMsg?.content.find((b) => b.type === 'text') as
+    | { type: 'text'; text: string }
+    | undefined
+  return textBlock?.text ?? null
+}
 
 interface AgentStore {
   // State
@@ -585,18 +600,11 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       // 实时保存会话到历史记录
       const finalState = get()
       if (finalState.messages.length > 0) {
-        // 提取会话标题：跳过 system-reminder 消息，取第一个真正的用户消息
-        const firstUserMsg = finalState.messages.find(
-          (m) =>
-            m.role === 'user' &&
-            !m.content.some(
-              (b) => b.type === 'text' && (b as { type: 'text'; text: string }).text.includes('<system-reminder>'),
-            ),
-        )
-        const textBlock = firstUserMsg?.content.find((b) => b.type === 'text') as
-          | { type: 'text'; text: string }
-          | undefined
-        const title = textBlock?.text?.slice(0, 50) || '未命名对话'
+        // 提取会话标题：调用大模型生成摘要
+        const firstSentence = extractFirstUserText(finalState.messages)
+        const title = firstSentence
+          ? await generateTitle(firstSentence, finalState.providerConfig)
+          : '未命名对话'
         const id = finalState.conversationId || `conv-${Date.now()}`
         const now = new Date().toISOString()
 
@@ -660,23 +668,13 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const state = get()
     // 自动保存当前会话到历史
     if (state.messages.length > 0) {
-      // 提取会话标题：跳过 system-reminder 消息，取第一个真正的用户消息
-      const firstUserMsg = state.messages.find(
-        (m) =>
-          m.role === 'user' &&
-          !m.content.some(
-            (b) => b.type === 'text' && (b as { type: 'text'; text: string }).text.includes('<system-reminder>'),
-          ),
-      )
-      const textBlock = firstUserMsg?.content.find((b) => b.type === 'text') as
-        | { type: 'text'; text: string }
-        | undefined
-      const title = textBlock?.text?.slice(0, 50) || '未命名对话'
+      const firstSentence = extractFirstUserText(state.messages)
+      const fallbackTitle = firstSentence?.slice(0, 50) || '未命名对话'
       const id = state.conversationId || `conv-${Date.now()}`
       const now = new Date().toISOString()
       const summary: ConversationSummary = {
         id,
-        title,
+        title: fallbackTitle,
         createdAt: now,
         updatedAt: now,
       }
@@ -685,22 +683,34 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         _conversationCache: { ...s._conversationCache, [id]: [...s.messages] },
       }))
 
-      // 持久化到文件系统
+      // 持久化到文件系统（先用截取标题保存）
       const conversationStore = state._conversationStore
       const bookStore = useBookStore.getState()
-      if (conversationStore && bookStore.currentBook) {
+      if (conversationStore && bookStore.currentBook && firstSentence) {
+        const savedMessages = [...state.messages]
+        const bookDir = bookStore.currentBook.directory
         const conversation = {
           id,
-          title,
-          messages: state.messages,
+          title: fallbackTitle,
+          messages: savedMessages,
           providerId: state.providerConfig.id,
           modelId: state.providerConfig.model,
           createdAt: now,
           updatedAt: now,
           version: 1,
         }
-        conversationStore.save(bookStore.currentBook.directory, conversation).catch(() => {
-          // 保存失败，忽略
+        conversationStore.save(bookDir, conversation).catch(() => {})
+
+        // 异步调用大模型生成摘要标题，完成后更新
+        generateTitle(firstSentence, state.providerConfig).then((llmTitle) => {
+          set((s) => ({
+            conversationHistory: s.conversationHistory.map((h) =>
+              h.id === id ? { ...h, title: llmTitle } : h,
+            ),
+          }))
+          conversationStore
+            .save(bookDir, { ...conversation, title: llmTitle })
+            .catch(() => {})
         })
       }
     }
