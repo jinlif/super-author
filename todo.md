@@ -24,43 +24,6 @@
 
 ### 3.9c 文件操作授权 + Diff 视图 ✅
 
-### 3.9d SubAgent 消息独立展示
-
-**现状：** SubAgent（`agent` 工具）在父 Agent 中执行时，其完整对话过程（thinking、tool calls、text 等）被折叠为一个工具调用块 `🔧 agent`，用户看不到子 agent 的思考过程和工具调用细节，只看到最终结果文本。
-
-**目标：** SubAgent 的消息展示形式与主 Agent 一致，消息上方显示"SubAgent"名称而非"AI 助手"，其内部的 thinking、tool calls、text 等全部展开可见。
-
-**方案变化（SubAgentTool → 事件透传）：**
-
-```
-当前:
-  SubAgentTool 执行 AgentLoop → 只收集 finalText → 返回 tool result → 父级折叠展示
-
-目标:
-  SubAgentTool 执行 AgentLoop → 透传所有 UI 事件到父级
-    → 父级 store 为 SubAgent 创建独立 assistant 消息块
-    → ChatRow 检测到 source === 'sub_agent'，渲染 "SubAgent" 标签
-```
-
-- [ ] **AgentMessage 类型扩展**
-  - `AgentMessage` 新增可选字段 `source?: 'main' | 'sub_agent'`
-  - SubAgent 产生的消息标记 `source: 'sub_agent'`
-- [ ] **SubAgentTool 改造 → 事件透传**
-  - handler 不再只收集 `finalText`，而是将 AgentLoop 产生的完整 UI 事件列表暴露给调用方
-  - 父 Agent 的 `tool_complete` 事件处理中，识别 sub_agent 返回的事件列表
-  - 将这些事件渲染为独立的 assistant 消息（而非工具折叠块）
-- [ ] **agentStore 集成 SubAgent 事件**
-  - 在 `sendMessage` 的 `tool_complete` 分支中，检测 toolName === 'agent'
-  - SubAgent 的 tool result 包含完整的事件列表
-  - 为 SubAgent 的每条消息创建独立的 `AgentMessage`，标记 `source: 'sub_agent'`
-  - 消息内容和主 agent 一样包含 text、thinking、tool_use 等块
-- [ ] **ChatRow 渲染 SubAgent 消息**
-  - 检测 `message.source === 'sub_agent'`，显示 `chat-label` 为 "SubAgent"（而非"AI 助手"）
-  - 内容渲染与主 agent 一致（ThinkingBlock、ToolCallBlock、text 等）
-- [ ] **CSS 样式**
-  - 添加 `.chat-row.sub-agent` 样式
-  - `.chat-label` 显示 "SubAgent"，颜色与主 agent 区分（或其他视觉差异）
-
 ### 3.9e setting模型配置保存和加载功能
 
 src\presentation\settings\SettingsPanel.tsx 目前模型配置只能被覆盖，用户可能有不同的模型设置需求。
