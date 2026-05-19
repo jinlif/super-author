@@ -44,7 +44,7 @@ export function createSubAgentTool(deps: SubAgentToolDeps): ToolDef {
         return { content: 'Parameter "prompt" is required', isError: true }
       }
 
-      const maxTurns = typeof input.maxTurns === 'number' ? input.maxTurns : undefined
+      const maxTurns = typeof input.maxTurns === 'number' ? input.maxTurns : 5
       const modelOverride = typeof input.model === 'string' ? input.model : undefined
       const subagentType = typeof input.subagent_type === 'string' ? input.subagent_type : undefined
 

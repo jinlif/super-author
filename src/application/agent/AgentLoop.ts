@@ -6,6 +6,8 @@ import { SystemPrompt } from './SystemPrompt'
 import { ToolExecutor } from './ToolExecutor'
 import type { ToolRegistry } from './ToolRegistry'
 
+const DEFAULT_MAX_TURNS = 100
+
 export interface AgentLoopOptions {
   provider: IProvider
   registry: ToolRegistry
@@ -36,7 +38,7 @@ export class AgentLoop {
       dirDescriptions,
       description,
       signal,
-      maxTurns,
+      maxTurns = DEFAULT_MAX_TURNS,
       systemPromptOverride,
       agentDefinitions,
       onUserInput,
