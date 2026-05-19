@@ -83,6 +83,8 @@ export function createSubAgentTool(deps: SubAgentToolDeps): ToolDef {
 
         let finalText = ''
         for await (const event of gen) {
+          context.onSubAgentEvent?.(event)
+
           if (event.type === 'stream_chunk') {
             finalText += event.text
           }
