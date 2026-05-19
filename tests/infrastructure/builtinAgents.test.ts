@@ -51,3 +51,22 @@ body`
     expect(result!.tools).toBeUndefined()
   })
 })
+
+import { loadBuiltinAgents } from '../../src/infrastructure/builtinAgents'
+
+describe('loadBuiltinAgents', () => {
+  it('应加载至少一个内置 agent', () => {
+    const agents = loadBuiltinAgents()
+    expect(agents.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('应包含 ai-detector agent', () => {
+    const agents = loadBuiltinAgents()
+    const detector = agents.find((a) => a.name === 'ai-detector')
+    expect(detector).toBeDefined()
+    expect(detector!.description).toBe('检测文本是否为 AI 生成，输出整体评分和问题分析')
+    expect(detector!.maxTurns).toBe(10)
+    expect(detector!.tools).toEqual(['read_file', 'list_dir', 'grep', 'get_file_info'])
+    expect(detector!.systemPrompt).toContain('AI 文检测分析师')
+  })
+})
