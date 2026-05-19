@@ -727,3 +727,12 @@
   margin-left: 4px;
   line-height: 1.4;
 }
+
+/* SubAgent 消息样式 */
+.chat-row.sub-agent .chat-label {
+  color: #c586c0;
+}
+
+.chat-row.sub-agent .chat-bubble {
+  border-left: 2px solid #c586c0;
+}
