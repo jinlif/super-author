@@ -81,6 +81,7 @@ function groupContentBlocks(content: AgentMessage['content']): ContentGroup[] {
 
 export function ChatRow({ message, isStreaming }: ChatRowProps) {
   const isUser = message.role === 'user'
+  const isSubAgent = message.source === 'sub_agent'
 
   if (isUser) {
     const text = message.content
@@ -97,8 +98,8 @@ export function ChatRow({ message, isStreaming }: ChatRowProps) {
   }
 
   return (
-    <div className="chat-row assistant">
-      <div className="chat-label">AI 助手</div>
+    <div className={`chat-row assistant${isSubAgent ? ' sub-agent' : ''}`}>
+      <div className="chat-label">{isSubAgent ? 'SubAgent' : 'AI 助手'}</div>
       <AssistantBubble content={message.content} isStreaming={isStreaming} />
     </div>
   )
