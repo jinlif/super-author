@@ -70,3 +70,20 @@ describe('loadBuiltinAgents', () => {
     expect(detector!.systemPrompt).toContain('AI 文检测分析师')
   })
 })
+
+import { loadBuiltinCommands } from '../../src/infrastructure/builtinCommands'
+
+describe('loadBuiltinCommands', () => {
+  it('应加载至少一个内置命令', () => {
+    const cmds = loadBuiltinCommands()
+    expect(cmds.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('应包含 ai-detect 命令', () => {
+    const cmds = loadBuiltinCommands()
+    const detect = cmds.find((c) => c.name === 'ai-detect')
+    expect(detect).toBeDefined()
+    expect(detect!.description).toBe('检测文本是否为 AI 生成')
+    expect(detect!.prompt).toContain('ai-detector')
+  })
+})
