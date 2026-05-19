@@ -1,4 +1,4 @@
-import type { ProviderConfig } from '../domain/types/agent'
+import type { AgentDefinition, ProviderConfig } from '../domain/types/agent'
 import type { CustomCommand } from '../domain/types/command'
 import type { IFileService } from './IFileService'
 
@@ -15,6 +15,48 @@ function parseCommandFile(content: string): CustomCommand | null {
   const description = descMatch ? descMatch[1].trim() : name
   const prompt = body || description
   return { name, description, prompt }
+}
+
+/** 解析 agent .md 文件：frontmatter + body 作为 systemPrompt */
+export function parseAgentFile(content: string): AgentDefinition | null {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/)
+  if (!match) return null
+  const frontmatter = match[1]
+  const body = match[2].trim()
+  if (!body) return null
+
+  const nameMatch = frontmatter.match(/^name:\s*(.+)$/m)
+  const descMatch = frontmatter.match(/^description:\s*(.+)$/m)
+  const modelMatch = frontmatter.match(/^model:\s*(.+)$/m)
+  const maxTurnsMatch = frontmatter.match(/^maxTurns:\s*(\d+)$/m)
+
+  // 解析 tools：支持 YAML 数组格式（- item）和逗号分隔格式
+  const toolsBlockMatch = frontmatter.match(/^tools:\s*\n((?:\s+-\s+.+\n?)+)/m)
+  let tools: string[] | undefined
+  if (toolsBlockMatch) {
+    tools = toolsBlockMatch[1]
+      .split('\n')
+      .map((line) => line.replace(/^\s*-\s*/, '').trim())
+      .filter(Boolean)
+  } else {
+    const toolsInlineMatch = frontmatter.match(/^tools:\s*(.+)$/m)
+    if (toolsInlineMatch) {
+      tools = toolsInlineMatch[1].split(',').map((t) => t.trim()).filter(Boolean)
+    }
+  }
+
+  if (!nameMatch) return null
+  const name = nameMatch[1].trim()
+  const description = descMatch ? descMatch[1].trim() : name
+
+  return {
+    name,
+    description,
+    model: modelMatch ? modelMatch[1].trim() : undefined,
+    maxTurns: maxTurnsMatch ? Number.parseInt(maxTurnsMatch[1], 10) : undefined,
+    tools,
+    systemPrompt: body,
+  }
 }
 
 export interface AppConfig {
@@ -109,6 +151,43 @@ export class ConfigService {
     } catch {
       return []
     }
+  }
+
+  /** 从多个目录加载 agent .md 文件，按优先级合并（同名覆盖） */
+  async loadAgentsFromDirs(
+    dirs: string[],
+    validModels?: string[],
+  ): Promise<AgentDefinition[]> {
+    const agentMap = new Map<string, AgentDefinition>()
+
+    // 反向遍历，让高优先级目录（靠前）覆盖低优先级
+    for (let i = dirs.length - 1; i >= 0; i--) {
+      const dir = dirs[i]
+      try {
+        if (!(await this.fs.exists(dir))) continue
+        const entries = await this.fs.readDir(dir)
+        for (const entry of entries) {
+          if (entry.isDir || !entry.name.endsWith('.md')) continue
+          try {
+            const content = await this.fs.readFile(entry.path)
+            const agent = parseAgentFile(content)
+            if (agent) {
+              // 校验 model 是否在有效列表中
+              if (agent.model && validModels && !validModels.includes(agent.model)) {
+                agent.model = undefined
+              }
+              agentMap.set(agent.name, agent)
+            }
+          } catch {
+            console.warn(`跳过无效 agent 文件: ${entry.name}`)
+          }
+        }
+      } catch {
+        // 目录不存在或读取失败，跳过
+      }
+    }
+
+    return Array.from(agentMap.values())
   }
 }
 

@@ -1,0 +1,53 @@
+import { describe, expect, it } from 'vitest'
+import { parseAgentFile } from '../../src/infrastructure/ConfigService'
+
+describe('parseAgentFile', () => {
+  const validContent = `---
+name: ai-detector
+description: 检测文本是否为 AI 生成
+model: claude-sonnet-4-20250514
+maxTurns: 10
+tools:
+  - read_file
+  - list_dir
+---
+
+你是一个 AI 文检测专家。`
+
+  it('应正确解析 frontmatter 各字段', () => {
+    const result = parseAgentFile(validContent)
+    expect(result).not.toBeNull()
+    expect(result!.name).toBe('ai-detector')
+    expect(result!.description).toBe('检测文本是否为 AI 生成')
+    expect(result!.model).toBe('claude-sonnet-4-20250514')
+    expect(result!.maxTurns).toBe(10)
+    expect(result!.tools).toEqual(['read_file', 'list_dir'])
+    expect(result!.systemPrompt).toBe('你是一个 AI 文检测专家。')
+  })
+
+  it('无 body 时应返回 null', () => {
+    const content = `---
+name: test
+description: desc
+---
+`
+    expect(parseAgentFile(content)).toBeNull()
+  })
+
+  it('无 name 时应返回 null', () => {
+    const content = `---
+description: desc
+---
+body`
+    expect(parseAgentFile(content)).toBeNull()
+  })
+
+  it('tools 为空数组时应返回 undefined', () => {
+    const content = `---
+name: test
+---
+body`
+    const result = parseAgentFile(content)
+    expect(result!.tools).toBeUndefined()
+  })
+})
