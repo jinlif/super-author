@@ -20,20 +20,43 @@
 
 ## 当前：Phase 3.9
 
-### 3.9e setting模型配置保存和加载功能
+### 3.9e Provider 规范化 & Thinking Mode 全面支持
+
+**背景**：Anthropic / OpenAI 是 API 接口规范名称，不是模型供应商。主流供应商（DeepSeek、MiMo 等）都支持这两种规范。
+
+#### 1. Provider 重命名与类型扩展
+
+- `ProviderConfig.id`：`'claude' | 'openai'` → `'anthropic' | 'openai'`（显示名："Anthropic Compatible" / "OpenAI Compatible"）
+- 新增 `reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'` 字段
+- 更新 `PROVIDER_DEFAULTS`、`agentStore` 初始化、`ConfigService` 持久化
+
+#### 2. Thinking Mode 两种 API 规范都支持
+
+- UI：`ThinkingSection` 移除 `providerConfig.id === 'claude'` 限制，两种 API 都显示
+- 添加 `reasoningEffort` 选择器（low / medium / high / xhigh / max）
+- Anthropic 格式：`{ thinking: { type: "enabled" }, output_config: { effort: "high" } }`
+- OpenAI 格式：`{ reasoning_effort: "high", extra_body: { thinking: { type: "enabled" } } }`
+
+#### 3. Provider 实现适配
+
+- `ClaudeProvider.ts`：使用 `output_config.effort` 传入 effort 参数
+- `OpenAIProvider.ts`：发送 `reasoning_effort` + `extra_body.thinking`
+- 两者都处理 `reasoning_content` 响应
+
+### 3.9f setting模型配置保存和加载功能
 
 src\presentation\settings\SettingsPanel.tsx 目前模型配置只能被覆盖，用户可能有不同的模型设置需求。
-要求，新增保存为配置按钮，需要校验baseurl/apikey 以及模型都有正确配置，校验通过弹框输入保存的name，然后在~/.super-author/config文件夹下创建configTemp.json，其中key是用户保存的名称，value需要存储baseurl/apikey/模型/thinking模式/provider/max token
+要求，新增保存为配置按钮，需要校验baseurl/apikey 以及模型都有正确配置，校验通过弹框输入保存的name，然后在~/.super-author/config文件夹下创建configTemp.json，其中key是用户保存的名称，value需要存储baseurl/apikey/模型/thinking模式/reasoningEffort/provider/max token
 
-### 3.9f token统计功能实现
+### 3.9g token统计功能实现
 
 agent面板在输入框下面新增进度条，显示当前已用token和总token
 
-### 3.9g 删除清空会话按钮和相关功能
+### 3.9h 删除清空会话按钮和相关功能
 
 清空会话和新建会话实际是相同功能，去掉清空会话
 
-### 3.9h 聊天面板内容渲染
+### 3.9i 聊天面板内容渲染
 
 聊天面板内容使用markdown格式渲染，由于有tool use部分，这一部分改为独立的一次会话，即思考和工具以及正文都分割开显示（相当于发了多次消息的效果）
 
