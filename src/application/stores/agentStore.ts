@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AgentMessage, ConversationSummary, ProviderConfig } from '../../domain/types/agent'
+import type { AgentMessage, AgentUIEvent, ConversationSummary, ProviderConfig } from '../../domain/types/agent'
 import type { ToolContext } from '../../domain/types/tool'
 import { ConfigService } from '../../infrastructure/ConfigService'
 import { createFileService } from '../../infrastructure/createFileService'
@@ -45,6 +45,12 @@ function extractFirstUserText(messages: AgentMessage[]): string | null {
   return textBlock?.text ?? null
 }
 
+interface SubAgentBuffer {
+  text: string
+  thinking: string
+  toolCallMap: Map<string, { name: string; input: Record<string, unknown> }>
+}
+
 interface AgentStore {
   // State
   messages: AgentMessage[]
@@ -67,6 +73,7 @@ interface AgentStore {
     modified: string
   } | null
   _conversationCache: Record<string, AgentMessage[]>
+  _subAgentBuf: SubAgentBuffer
 
   // Dependencies (injected)
   _registry: ToolRegistry | null
@@ -104,6 +111,7 @@ interface AgentStore {
   loadConversationHistory: () => Promise<void>
   setTempChapterData: (data: { title: string; content: string } | null) => void
   clearDiffForReview: () => void
+  handleSubAgentEvent: (event: AgentUIEvent) => void
 }
 
 const defaultProviderConfig: ProviderConfig = {
@@ -127,6 +135,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   pendingTool: null,
   diffForReview: null,
   _conversationCache: {},
+  _subAgentBuf: { text: '', thinking: '', toolCallMap: new Map() },
 
   _registry: null,
   _toolContext: null,
@@ -422,6 +431,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
           case 'tool_executing':
             toolCallMap.set(event.toolId, { name: event.toolName, input: {} })
+            // 为 agent 工具注入 SubAgent 事件回调
+            if (event.toolName === 'agent' && toolContext) {
+              toolContext.onSubAgentEvent = get().handleSubAgentEvent
+            }
             break
 
           case 'waiting_confirm': {
@@ -479,6 +492,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           }
 
           case 'tool_complete': {
+            // agent 工具的 SubAgent 消息已独立展示，跳过常规折叠块
+            if (event.toolName === 'agent') break
+
             const tc = toolCallMap.get(event.toolId)
             // 使用 AgentLoop 传递的 input（已从流式 delta 中正确解析）
             const toolInput = event.input ?? tc?.input ?? {}
@@ -802,5 +818,116 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
   clearDiffForReview: () => {
     set({ diffForReview: null })
+  },
+
+  handleSubAgentEvent: (event: AgentUIEvent) => {
+    switch (event.type) {
+      case 'turn_start': {
+        // 重置缓冲区，创建新的 sub_agent 消息
+        set((state) => ({
+          _subAgentBuf: { text: '', thinking: '', toolCallMap: new Map() },
+          messages: [...state.messages, { role: 'assistant', content: [], source: 'sub_agent' }],
+        }))
+        break
+      }
+
+      case 'thinking_delta': {
+        const buf = get()._subAgentBuf
+        buf.thinking += event.text
+        set((state) => {
+          const msgs = state.messages.map((m) => ({ ...m, content: [...m.content] }))
+          const lastMsg = msgs[msgs.length - 1]
+          if (lastMsg?.role === 'assistant' && lastMsg.source === 'sub_agent') {
+            const thinkIdx = lastMsg.content.findIndex((b) => b.type === 'thinking')
+            if (thinkIdx >= 0) {
+              lastMsg.content[thinkIdx] = { type: 'thinking', text: buf.thinking }
+            } else {
+              lastMsg.content.unshift({ type: 'thinking', text: buf.thinking })
+            }
+          }
+          return { messages: msgs }
+        })
+        break
+      }
+
+      case 'stream_chunk': {
+        const buf = get()._subAgentBuf
+        buf.text += event.text
+        set((state) => {
+          const msgs = state.messages.map((m) => ({ ...m, content: [...m.content] }))
+          const lastMsg = msgs[msgs.length - 1]
+          if (lastMsg?.role === 'assistant' && lastMsg.source === 'sub_agent') {
+            const textIdx = lastMsg.content.findIndex((b) => b.type === 'text')
+            if (textIdx >= 0) {
+              lastMsg.content[textIdx] = { type: 'text', text: buf.text }
+            } else {
+              lastMsg.content.push({ type: 'text', text: buf.text })
+            }
+          }
+          return { messages: msgs }
+        })
+        break
+      }
+
+      case 'tool_executing': {
+        const buf = get()._subAgentBuf
+        buf.toolCallMap.set(event.toolId, { name: event.toolName, input: {} })
+        break
+      }
+
+      case 'tool_complete': {
+        const buf = get()._subAgentBuf
+        const tc = buf.toolCallMap.get(event.toolId)
+        const toolInput = event.input ?? tc?.input ?? {}
+        set((state) => {
+          const msgs = state.messages.map((m) => ({ ...m, content: [...m.content] }))
+          const lastMsg = msgs[msgs.length - 1]
+          if (lastMsg?.role === 'assistant' && lastMsg.source === 'sub_agent') {
+            lastMsg.content.push({
+              type: 'tool_use',
+              id: event.toolId,
+              name: event.toolName,
+              input: toolInput,
+            })
+            lastMsg.content.push({
+              type: 'text',
+              text: `\n\n[工具 ${event.toolName} 执行完成:\n${event.result}]`,
+            })
+          }
+          return { messages: msgs }
+        })
+        break
+      }
+
+      case 'error': {
+        set((state) => {
+          const msgs = state.messages.map((m) => ({ ...m, content: [...m.content] }))
+          const lastMsg = msgs[msgs.length - 1]
+          if (lastMsg?.role === 'assistant' && lastMsg.source === 'sub_agent') {
+            const errorText = `⚠️ ${event.message}`
+            const textIdx = lastMsg.content.findIndex((b) => b.type === 'text')
+            if (textIdx >= 0) {
+              const existingBlock = lastMsg.content[textIdx]
+              if (existingBlock.type === 'text') {
+                lastMsg.content[textIdx] = {
+                  type: 'text',
+                  text: `${existingBlock.text}\n\n${errorText}`,
+                }
+              }
+            } else {
+              lastMsg.content.push({ type: 'text', text: errorText })
+            }
+          }
+          return { messages: msgs }
+        })
+        break
+      }
+
+      case 'done': {
+        // 清理缓冲区
+        set({ _subAgentBuf: { text: '', thinking: '', toolCallMap: new Map() } })
+        break
+      }
+    }
   },
 }))
