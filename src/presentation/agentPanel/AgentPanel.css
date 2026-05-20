@@ -1075,6 +1075,9 @@
   border-radius: 3px;
   font-size: 12px;
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 /* ============================================================
