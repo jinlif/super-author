@@ -9,17 +9,18 @@ const PROVIDER_DEFAULTS: Record<string, { name: string; model: string; models: M
     name: 'Anthropic',
     model: 'claude-sonnet-4-20250514',
     models: [
-      { modelName: 'claude-sonnet-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
-      { modelName: 'claude-opus-4-20250514', maxTokens: 8192, thinkingMode: false, effort: 'high' },
+      {
+        modelName: 'claude-sonnet-4-20250514',
+        maxTokens: 8192,
+        thinkingMode: false,
+        effort: 'high',
+      },
     ],
   },
   openai: {
     name: 'OpenAI',
     model: 'gpt-4o',
-    models: [
-      { modelName: 'gpt-4o', maxTokens: 8192, thinkingMode: false, effort: 'high' },
-      { modelName: 'gpt-4o-mini', maxTokens: 8192, thinkingMode: false, effort: 'high' },
-    ],
+    models: [{ modelName: 'gpt-4o', maxTokens: 8192, thinkingMode: false, effort: 'high' }],
   },
 }
 
@@ -92,13 +93,13 @@ function ProviderSection({
       setProviderConfig({
         id: newId,
         ...defaults,
-        apiKey: config.apiKey,
-        baseUrl: config.baseUrl,
+        apiKey: '',
+        baseUrl: undefined,
         temperature: undefined,
         presetName: undefined,
       })
     },
-    [setProviderConfig, config.apiKey, config.baseUrl, loadPreset, loadPresets],
+    [setProviderConfig, loadPreset, loadPresets],
   )
 
   const handleSavePreset = useCallback(async () => {
@@ -173,10 +174,18 @@ function ProviderSection({
                   if (e.key === 'Escape') setShowSaveDialog(false)
                 }}
               />
-              <button type="button" className="settings-btn settings-btn-primary" onClick={handleSavePreset}>
+              <button
+                type="button"
+                className="settings-btn settings-btn-primary"
+                onClick={handleSavePreset}
+              >
                 保存
               </button>
-              <button type="button" className="settings-btn" onClick={() => setShowSaveDialog(false)}>
+              <button
+                type="button"
+                className="settings-btn"
+                onClick={() => setShowSaveDialog(false)}
+              >
                 取消
               </button>
             </>
@@ -248,7 +257,8 @@ function ApiSection({
 }) {
   const [showKey, setShowKey] = useState(false)
 
-  const placeholder = config.id === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com'
+  const placeholder =
+    config.id === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com'
 
   return (
     <div className="settings-section">
@@ -299,7 +309,12 @@ function ModelSection({
   const handleAdd = useCallback(() => {
     const name = newModel.trim()
     if (!name || config.models.some((m) => m.modelName === name)) return
-    const newItem: ModelsItem = { modelName: name, maxTokens: 8192, thinkingMode: false, effort: 'high' }
+    const newItem: ModelsItem = {
+      modelName: name,
+      maxTokens: 8192,
+      thinkingMode: false,
+      effort: 'high',
+    }
     setProviderConfig({ models: [...config.models, newItem] })
     setNewModel('')
   }, [newModel, config.models, setProviderConfig])
@@ -393,7 +408,11 @@ function ModelSection({
                         const num = Number(e.target.value)
                         if (!Number.isNaN(num)) {
                           const multiplier = display.unit === 'M' ? 1_000_000 : 1000
-                          handleModelFieldChange(m.modelName, 'maxTokens', clampToken(num * multiplier))
+                          handleModelFieldChange(
+                            m.modelName,
+                            'maxTokens',
+                            clampToken(num * multiplier),
+                          )
                         }
                       }}
                     />
@@ -412,7 +431,9 @@ function ModelSection({
                   <span className="model-item-label">Thinking</span>
                   <div
                     className={`toggle-switch ${m.thinkingMode ? 'active' : ''}`}
-                    onClick={() => handleModelFieldChange(m.modelName, 'thinkingMode', !m.thinkingMode)}
+                    onClick={() =>
+                      handleModelFieldChange(m.modelName, 'thinkingMode', !m.thinkingMode)
+                    }
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -428,7 +449,9 @@ function ModelSection({
                     <CustomSelect
                       size="small"
                       value={m.effort}
-                      onValueChange={(v) => handleModelFieldChange(m.modelName, 'effort', v as EffortLevel)}
+                      onValueChange={(v) =>
+                        handleModelFieldChange(m.modelName, 'effort', v as EffortLevel)
+                      }
                       options={EFFORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                     />
                   </div>
