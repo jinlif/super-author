@@ -167,7 +167,7 @@ function AssistantBubble({
       {groups.map((g, i) => {
         if (g.kind === 'thinking') {
           // biome-ignore lint/suspicious/noArrayIndexKey: 内容块顺序稳定不会重排
-          return <ThinkingBlock key={`think-${i}`} text={g.text} />
+          return <ThinkingBlock key={`think-${i}`} text={g.text} isStreaming={isStreaming} />
         }
         if (g.kind === 'tool') {
           return (
@@ -195,12 +195,20 @@ function AssistantBubble({
   )
 }
 
-function ThinkingBlock({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false)
+function ThinkingBlock({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
+  const [manuallyToggled, setManuallyToggled] = useState<boolean | null>(null)
+  // 流式时自动展开；用户手动操作后尊重用户选择
+  const expanded = manuallyToggled ?? (isStreaming && text.length > 0)
 
   return (
     <div className="thinking-block">
-      <button type="button" className="thinking-toggle" onClick={() => setExpanded(!expanded)}>
+      <button
+        type="button"
+        className="thinking-toggle"
+        onClick={() => {
+          setManuallyToggled((prev) => (prev === null ? !expanded : !prev))
+        }}
+      >
         {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <Brain size={14} />
         思考过程
