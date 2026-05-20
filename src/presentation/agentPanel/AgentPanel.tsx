@@ -1,4 +1,4 @@
-import { FilePlus, History, Trash2, X } from 'lucide-react'
+import { FilePlus, History, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useAgentStore } from '../../application/stores/agentStore'
 import { useLayoutStore } from '../../application/stores/layoutStore'
@@ -80,14 +80,6 @@ export function AgentPanel() {
           >
             <History size={14} />
           </button>
-          <button
-            type="button"
-            className="agent-header-btn"
-            onClick={clearConversation}
-            title="清空对话"
-          >
-            <Trash2 size={14} />
-          </button>
           <button type="button" className="agent-header-btn" onClick={toggleAgent} title="关闭">
             <X size={14} />
           </button>
@@ -117,10 +109,7 @@ export function AgentPanel() {
         {pendingTool && pendingTool.name !== 'ask_question' && <ApprovalDialog />}
         {pendingTool?.name === 'ask_question' && <AskDialog />}
         <AgentInput onOpenModelPicker={() => setShowModelPicker(true)} />
-        <ModelPickerModal
-          visible={showModelPicker}
-          onClose={() => setShowModelPicker(false)}
-        />
+        <ModelPickerModal visible={showModelPicker} onClose={() => setShowModelPicker(false)} />
       </div>
     </div>
   )
