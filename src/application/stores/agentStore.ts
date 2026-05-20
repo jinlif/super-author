@@ -801,10 +801,13 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     const state = get()
     const updated = { ...state.providerConfig, ...config }
     set({ providerConfig: updated })
-    // 持久化配置
     const configService = state._configService
     if (configService) {
       configService.saveProviderConfig(updated)
+      // 当前是预设时，同步修改到预设文件
+      if (updated.presetName) {
+        configService.savePreset(updated.presetName, updated)
+      }
     }
   },
 

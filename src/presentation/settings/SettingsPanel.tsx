@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAgentStore } from '../../application/stores/agentStore'
 import type { EffortLevel, ModelsItem, ProviderConfig } from '../../domain/types/agent'
+import { CustomSelect } from './CustomSelect'
 import './SettingsPanel.css'
 
 const PROVIDER_DEFAULTS: Record<string, { name: string; model: string; models: ModelsItem[] }> = {
@@ -78,9 +79,7 @@ function ProviderSection({
   }, [loadPresets])
 
   const handleProviderChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = e.target.value
-      // 如果选择的是预设
+    (value: string) => {
       if (value.startsWith('preset:')) {
         const name = value.slice(7)
         loadPreset(name).then(() => {
@@ -138,55 +137,66 @@ function ProviderSection({
     <div className="settings-section">
       <div className="settings-section-title">Provider</div>
       <label className="settings-label">AI Provider</label>
-      <select className="settings-select" value={config.presetName ? `preset:${config.presetName}` : config.id} onChange={handleProviderChange}>
-        <optgroup label="内置">
-          <option value="anthropic">Anthropic Compatible</option>
-          <option value="openai">OpenAI Compatible</option>
-        </optgroup>
-        {presetNames.length > 0 && (
-          <optgroup label="已保存的配置">
-            {presetNames.map((name) => (
-              <option key={name} value={`preset:${name}`}>
-                {name}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
-      <div className="settings-row" style={{ marginTop: 8 }}>
-        {showSaveDialog ? (
-          <>
-            <input
-              type="text"
-              className="settings-input"
-              placeholder="输入配置名称"
-              value={presetName}
-              onChange={(e) => setPresetName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSavePreset()
-                if (e.key === 'Escape') setShowSaveDialog(false)
-              }}
-            />
-            <button type="button" className="settings-btn settings-btn-primary" onClick={handleSavePreset}>
-              保存
+      <CustomSelect
+        value={config.presetName ? `preset:${config.presetName}` : config.id}
+        onValueChange={handleProviderChange}
+        groups={[
+          {
+            label: '内置',
+            options: [
+              { value: 'anthropic', label: 'Anthropic Compatible' },
+              { value: 'openai', label: 'OpenAI Compatible' },
+            ],
+          },
+          ...(presetNames.length > 0
+            ? [
+                {
+                  label: '已保存的配置',
+                  options: presetNames.map((name) => ({ value: `preset:${name}`, label: name })),
+                },
+              ]
+            : []),
+        ]}
+      />
+      {!config.presetName && (
+        <div className="settings-row" style={{ marginTop: 8 }}>
+          {showSaveDialog ? (
+            <>
+              <input
+                type="text"
+                className="settings-input"
+                placeholder="输入配置名称"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSavePreset()
+                  if (e.key === 'Escape') setShowSaveDialog(false)
+                }}
+              />
+              <button type="button" className="settings-btn settings-btn-primary" onClick={handleSavePreset}>
+                保存
+              </button>
+              <button type="button" className="settings-btn" onClick={() => setShowSaveDialog(false)}>
+                取消
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="settings-btn settings-btn-primary"
+              onClick={() => setShowSaveDialog(true)}
+            >
+              保存为配置
             </button>
-            <button type="button" className="settings-btn" onClick={() => setShowSaveDialog(false)}>
-              取消
-            </button>
-          </>
-        ) : (
-          <button type="button" className="settings-btn settings-btn-primary" onClick={() => setShowSaveDialog(true)}>
-            保存为配置
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
       {config.presetName && (
-        <div className="settings-row" style={{ marginTop: 4 }}>
-          <span className="settings-hint">当前预设: {config.presetName}</span>
+        <div className="preset-current">
+          <span className="preset-current-name">{config.presetName}</span>
           <button
             type="button"
-            className="settings-btn"
-            style={{ color: '#f87171' }}
+            className="settings-btn settings-btn-preset-delete"
             onClick={() => handleDeletePreset(config.presetName!)}
           >
             删除预设
@@ -415,17 +425,12 @@ function ModelSection({
                 {m.thinkingMode && (
                   <div className="model-item-row">
                     <span className="model-item-label">Effort</span>
-                    <select
-                      className="model-item-select"
+                    <CustomSelect
+                      size="small"
                       value={m.effort}
-                      onChange={(e) => handleModelFieldChange(m.modelName, 'effort', e.target.value as EffortLevel)}
-                    >
-                      {EFFORT_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(v) => handleModelFieldChange(m.modelName, 'effort', v as EffortLevel)}
+                      options={EFFORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                    />
                   </div>
                 )}
               </div>
@@ -473,6 +478,10 @@ function ParameterSection({
           step={0.1}
           value={config.temperature ?? 0.7}
           onChange={(e) => setProviderConfig({ temperature: Number(e.target.value) })}
+          onInput={(e) => {
+            const pct = ((Number(e.currentTarget.value) - 0) / (2 - 0)) * 100
+            e.currentTarget.style.setProperty('--sp-range-pct', `${pct}%`)
+          }}
         />
         <span className="settings-range-value">{(config.temperature ?? 0.7).toFixed(1)}</span>
       </div>

@@ -19,6 +19,17 @@ fn write_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn append_file(path: String, content: String) -> Result<(), String> {
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    file.write_all(content.as_bytes()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn read_dir(path: String) -> Result<Vec<FileEntry>, String> {
     let entries = std::fs::read_dir(&path)
         .map_err(|e| e.to_string())?
@@ -70,6 +81,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_file,
             write_file,
+            append_file,
             read_dir,
             create_dir,
             path_exists,
