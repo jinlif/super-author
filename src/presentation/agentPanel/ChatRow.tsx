@@ -1,9 +1,11 @@
+import { Bot, Brain, Check, ChevronDown, ChevronRight, User, Wrench, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type {
   AgentMessage,
   AssistantContentBlock,
   ToolResultContentBlock,
 } from '../../domain/types/agent'
+import { MarkdownRenderer } from './MarkdownRenderer'
 
 interface ChatRowProps {
   message: AgentMessage
@@ -23,6 +25,45 @@ type ContentGroup =
       result?: string
       isError?: boolean
     }
+
+/** 从工具参数中提取关键摘要 */
+function getToolSummary(name: string, input?: Record<string, unknown>): string {
+  if (!input) return ''
+
+  // 读取/写入/编辑文件类工具 → 显示路径
+  if (
+    ['read_file', 'write_file', 'edit_file', 'readFile', 'writeFile', 'editFile'].includes(name)
+  ) {
+    const path = (input.path ?? input.file_path ?? input.filePath ?? '') as string
+    return path ? truncate(path, 40) : ''
+  }
+
+  // bash/execute_command → 显示命令
+  if (['bash', 'execute_command', 'executeCommand', 'run_command'].includes(name)) {
+    const cmd = (input.command ?? input.cmd ?? '') as string
+    return cmd ? truncate(cmd, 40) : ''
+  }
+
+  // grep/search → 显示 pattern
+  if (['grep', 'search', 'ripgrep'].includes(name)) {
+    const pattern = (input.pattern ?? input.query ?? '') as string
+    return pattern ? truncate(pattern, 40) : ''
+  }
+
+  // 其他工具 → 显示第一个字符串参数
+  for (const val of Object.values(input)) {
+    if (typeof val === 'string' && val.length > 0) {
+      return truncate(val, 40)
+    }
+  }
+
+  return ''
+}
+
+function truncate(str: string, max: number): string {
+  const oneLine = str.replace(/\n/g, ' ')
+  return oneLine.length > max ? `${oneLine.slice(0, max)}...` : oneLine
+}
 
 /** 将 content 块按顺序分组：文本/thinking 正常渲染，tool_use + 结果文本配对为折叠块 */
 function groupContentBlocks(content: AgentMessage['content']): ContentGroup[] {
@@ -91,7 +132,9 @@ export function ChatRow({ message, isStreaming }: ChatRowProps) {
 
     return (
       <div className="chat-row user">
-        <div className="chat-label">你</div>
+        <div className="chat-label">
+          <User size={12} /> 你
+        </div>
         <div className="chat-bubble">{text}</div>
       </div>
     )
@@ -99,7 +142,9 @@ export function ChatRow({ message, isStreaming }: ChatRowProps) {
 
   return (
     <div className={`chat-row assistant${isSubAgent ? ' sub-agent' : ''}`}>
-      <div className="chat-label">{isSubAgent ? 'SubAgent' : 'AI 助手'}</div>
+      <div className="chat-label">
+        <Bot size={12} /> {isSubAgent ? 'SubAgent' : 'AI 助手'}
+      </div>
       <AssistantBubble content={message.content} isStreaming={isStreaming} />
     </div>
   )
@@ -121,11 +166,13 @@ function AssistantBubble({
     <div className="chat-bubble">
       {groups.map((g, i) => {
         if (g.kind === 'thinking') {
+          // biome-ignore lint/suspicious/noArrayIndexKey: 内容块顺序稳定不会重排
           return <ThinkingBlock key={`think-${i}`} text={g.text} />
         }
         if (g.kind === 'tool') {
           return (
             <ToolCallBlock
+              // biome-ignore lint/suspicious/noArrayIndexKey: 内容块顺序稳定不会重排
               key={`tool-${i}`}
               name={g.name}
               input={g.input}
@@ -136,8 +183,9 @@ function AssistantBubble({
         }
         // text
         return (
+          // biome-ignore lint/suspicious/noArrayIndexKey: 内容块顺序稳定不会重排
           <div key={`text-${i}`}>
-            {g.text}
+            <MarkdownRenderer content={g.text} />
             {isStreaming && i === groups.length - 1 && <span className="streaming-cursor" />}
           </div>
         )
@@ -153,7 +201,9 @@ function ThinkingBlock({ text }: { text: string }) {
   return (
     <div className="thinking-block">
       <button type="button" className="thinking-toggle" onClick={() => setExpanded(!expanded)}>
-        {expanded ? '▼' : '▶'} 思考过程
+        {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <Brain size={14} />
+        思考过程
       </button>
       {expanded && <div className="thinking-content">{text}</div>}
     </div>
@@ -174,6 +224,7 @@ function ToolCallBlock({
   const [expanded, setExpanded] = useState(false)
   const formattedInput = input ? JSON.stringify(input, null, 2) : ''
   const hasDetail = formattedInput || result
+  const summary = getToolSummary(name, input)
 
   return (
     <div className="tool-call-block">
@@ -182,19 +233,32 @@ function ToolCallBlock({
         className="tool-call-toggle"
         onClick={() => hasDetail && setExpanded(!expanded)}
       >
-        <span className="tool-call-arrow">{hasDetail ? (expanded ? '▼' : '▶') : ''}</span>
-        <span>🔧</span>
+        <span className="tool-call-arrow">
+          {hasDetail ? expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} /> : null}
+        </span>
+        <Wrench size={14} />
         <span className="tool-call-name">{name}</span>
+        {summary && <span className="tool-call-summary">{summary}</span>}
         {result && !expanded && (
           <span className={`tool-call-status ${isError ? 'error' : ''}`}>
-            {isError ? '✗' : '✓'}
+            {isError ? <X size={14} /> : <Check size={14} />}
           </span>
         )}
       </button>
       {expanded && (
         <div className="tool-call-detail">
-          {formattedInput && <pre className="tool-call-input">{formattedInput}</pre>}
-          {result && <div className={`tool-call-result${isError ? ' error' : ''}`}>{result}</div>}
+          {formattedInput && (
+            <>
+              <div className="tool-call-section-label">Input</div>
+              <pre className="tool-call-input">{formattedInput}</pre>
+            </>
+          )}
+          {result && (
+            <>
+              <div className="tool-call-section-label">Result</div>
+              <div className={`tool-call-result${isError ? ' error' : ''}`}>{result}</div>
+            </>
+          )}
         </div>
       )}
     </div>

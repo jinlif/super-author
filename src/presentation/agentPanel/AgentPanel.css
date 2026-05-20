@@ -780,3 +780,386 @@
 .chat-row.sub-agent .chat-bubble {
   border-left: 2px solid #c586c0;
 }
+
+/* ============================================================
+   Chat Label — lucide 图标布局
+   ============================================================ */
+.chat-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ============================================================
+   Thinking Block — 优化
+   ============================================================ */
+.thinking-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thinking-toggle svg {
+  color: #858585;
+  flex-shrink: 0;
+}
+
+.thinking-content {
+  border-left-color: rgba(78, 201, 176, 0.4);
+}
+
+/* ============================================================
+   Tool Call Block — 参数摘要 & 分区标题
+   ============================================================ */
+.tool-call-summary {
+  color: #6a6a6a;
+  font-size: 11px;
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.tool-call-toggle svg {
+  flex-shrink: 0;
+}
+
+.tool-call-section-label {
+  font-size: 10px;
+  color: #6a6a6a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 8px 2px;
+  background-color: #1a1a1a;
+  border-top: 1px solid #2a2a2a;
+}
+
+.tool-call-section-label + .tool-call-input {
+  border-top: none;
+}
+
+.tool-call-section-label + .tool-call-result {
+  border-top: none;
+}
+
+/* ============================================================
+   Markdown 渲染样式
+   ============================================================ */
+.markdown-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  word-break: break-word;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+/* 标题 */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  font-weight: 600;
+  color: #e0e0e0;
+  margin: 12px 0 6px;
+}
+
+.markdown-body h1 {
+  font-size: 16px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.markdown-body h2 {
+  font-size: 14px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.markdown-body h3 {
+  font-size: 13px;
+}
+
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  font-size: 12px;
+}
+
+/* 段落 */
+.markdown-body p {
+  margin: 6px 0;
+}
+
+/* 粗体/斜体 */
+.markdown-body strong {
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.markdown-body em {
+  font-style: italic;
+  color: #c0c0c0;
+}
+
+/* 删除线 */
+.markdown-body del {
+  color: #858585;
+  text-decoration: line-through;
+}
+
+/* 链接 */
+.markdown-body a {
+  color: #4fc1ff;
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+/* 列表 */
+.markdown-body ul,
+.markdown-body ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.markdown-body li {
+  margin: 2px 0;
+}
+
+.markdown-body li > p {
+  margin: 2px 0;
+}
+
+/* 任务列表 */
+.markdown-body input[type='checkbox'] {
+  accent-color: #007acc;
+  margin-right: 6px;
+}
+
+/* 引用块 */
+.markdown-body blockquote {
+  margin: 6px 0;
+  padding: 4px 12px;
+  border-left: 3px solid #4ec9b0;
+  background-color: #252526;
+  border-radius: 0 4px 4px 0;
+  color: #a0a0a0;
+}
+
+.markdown-body blockquote p {
+  margin: 2px 0;
+}
+
+/* 分隔线 */
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid #3c3c3c;
+  margin: 10px 0;
+}
+
+/* 表格 */
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 6px 0;
+  width: 100%;
+  font-size: 12px;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #3c3c3c;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.markdown-body th {
+  background-color: #2a2a2a;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.markdown-body tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* 图片 */
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+/* ============================================================
+   代码块
+   ============================================================ */
+.code-block {
+  margin: 6px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #1a1a1a;
+  border: 1px solid #2a2a2a;
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background-color: #252526;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.code-block-lang {
+  font-size: 11px;
+  color: #858585;
+  text-transform: lowercase;
+}
+
+.code-block-copy {
+  background: none;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.code-block-copy:hover {
+  background-color: #3c3c3c;
+  color: #cccccc;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 8px 12px;
+  background-color: transparent;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.code-block pre code {
+  background: none;
+  padding: 0;
+}
+
+/* 内联代码 */
+.inline-code {
+  background-color: #2d2d2d;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ============================================================
+   highlight.js 暗色主题适配
+   ============================================================ */
+.hljs {
+  background: transparent !important;
+  color: #d4d4d4;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-type {
+  color: #569cd6;
+}
+
+.hljs-string,
+.hljs-attr {
+  color: #ce9178;
+}
+
+.hljs-number,
+.hljs-literal {
+  color: #b5cea8;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.hljs-function,
+.hljs-title {
+  color: #dcdcaa;
+}
+
+.hljs-params {
+  color: #9cdcfe;
+}
+
+.hljs-variable,
+.hljs-template-variable {
+  color: #9cdcfe;
+}
+
+.hljs-class .hljs-title,
+.hljs-title.class_ {
+  color: #4ec9b0;
+}
+
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+  color: #c586c0;
+}
+
+.hljs-tag {
+  color: #569cd6;
+}
+
+.hljs-name {
+  color: #569cd6;
+}
+
+.hljs-attribute {
+  color: #9cdcfe;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #d7ba7d;
+}
+
+.hljs-regexp {
+  color: #d16969;
+}
+
+.hljs-addition {
+  color: #b5cea8;
+  background-color: rgba(81, 157, 58, 0.15);
+}
+
+.hljs-deletion {
+  color: #d16969;
+  background-color: rgba(209, 105, 105, 0.15);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
