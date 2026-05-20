@@ -855,7 +855,6 @@
   word-break: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
-  overflow-x: hidden;
 }
 
 .markdown-body > *:first-child {
