@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AgentDefinition, AgentMessage, AgentUIEvent, ConversationSummary, ProviderConfig } from '../../domain/types/agent'
+import type { AgentDefinition, AgentMessage, AgentUIEvent, ConversationSummary, ProviderConfig, TokenUsage } from '../../domain/types/agent'
 import type { CustomCommand } from '../../domain/types/command'
 import type { ToolContext } from '../../domain/types/tool'
 import { loadBuiltinAgents } from '../../infrastructure/builtinAgents'
@@ -48,6 +48,30 @@ function extractFirstUserText(messages: AgentMessage[]): string | null {
   return textBlock?.text ?? null
 }
 
+/** 累积 token 用量：更新 current（显示用），累加到 session */
+export
+function accumulateTokenUsage(
+  session: TokenUsage,
+  event: { inputTokens: number; outputTokens: number } & Partial<TokenUsage>,
+): { currentTokenUsage: TokenUsage; sessionTokenUsage: TokenUsage } {
+  return {
+    currentTokenUsage: {
+      inputTokens: event.inputTokens,
+      outputTokens: event.outputTokens,
+      cacheReadTokens: event.cacheReadTokens,
+      cacheCreationTokens: event.cacheCreationTokens,
+      reasoningTokens: event.reasoningTokens,
+    },
+    sessionTokenUsage: {
+      inputTokens: session.inputTokens + event.inputTokens,
+      outputTokens: session.outputTokens + event.outputTokens,
+      cacheReadTokens: (session.cacheReadTokens ?? 0) + (event.cacheReadTokens ?? 0),
+      cacheCreationTokens: (session.cacheCreationTokens ?? 0) + (event.cacheCreationTokens ?? 0),
+      reasoningTokens: (session.reasoningTokens ?? 0) + (event.reasoningTokens ?? 0),
+    },
+  }
+}
+
 interface SubAgentBuffer {
   text: string
   thinking: string
@@ -78,6 +102,10 @@ interface AgentStore {
   } | null
   _conversationCache: Record<string, AgentMessage[]>
   _subAgentBuf: SubAgentBuffer
+
+  // Token 统计
+  currentTokenUsage: TokenUsage    // 当前执行中的 agent（主或子）
+  sessionTokenUsage: TokenUsage    // 会话累计（主 + 所有子 agent）
 
   // Dependencies (injected)
   _registry: ToolRegistry | null
@@ -121,6 +149,7 @@ interface AgentStore {
   setTempChapterData: (data: { title: string; content: string } | null) => void
   clearDiffForReview: () => void
   handleSubAgentEvent: (event: AgentUIEvent) => void
+  showCostStats: () => void
 }
 
 const defaultProviderConfig: ProviderConfig = {
@@ -148,6 +177,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   diffForReview: null,
   _conversationCache: {},
   _subAgentBuf: { text: '', thinking: '', toolCallMap: new Map() },
+  currentTokenUsage: { inputTokens: 0, outputTokens: 0 },
+  sessionTokenUsage: { inputTokens: 0, outputTokens: 0 },
 
   _registry: null,
   _toolContext: null,
@@ -327,6 +358,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       isStreaming: true,
       error: null,
       currentTurn: 0,
+      currentTokenUsage: { inputTokens: 0, outputTokens: 0 },
     })
 
     // 构建发送给 API 的消息（临时注入 AGENT.md，不影响保存的消息）
@@ -658,6 +690,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           case 'done':
             set({ pendingTool: null, diffForReview: null })
             break
+
+          case 'usage':
+            set((s) => accumulateTokenUsage(s.sessionTokenUsage, event))
+            break
         }
       }
 
@@ -717,6 +753,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             createdAt: summary.createdAt,
             updatedAt: now,
             version: 1,
+            tokenUsage: finalState.sessionTokenUsage,
           }
           conversationStore.save(bookStore.currentBook.directory, conversation).catch(() => {
             // 保存失败，忽略
@@ -794,7 +831,14 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         })
       }
     }
-    set({ messages: [], conversationId: null, error: null, currentTurn: 0 })
+    set({
+      messages: [],
+      conversationId: null,
+      error: null,
+      currentTurn: 0,
+      sessionTokenUsage: { inputTokens: 0, outputTokens: 0 },
+      currentTokenUsage: { inputTokens: 0, outputTokens: 0 },
+    })
   },
 
   setProviderConfig: (config) => {
@@ -872,6 +916,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           },
           error: null,
           currentTurn: 0,
+          sessionTokenUsage: conversation.tokenUsage ?? { inputTokens: 0, outputTokens: 0 },
+          currentTokenUsage: { inputTokens: 0, outputTokens: 0 },
         })
       }
     }
@@ -1018,11 +1064,50 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         break
       }
 
+      case 'usage': {
+        set((s) => accumulateTokenUsage(s.sessionTokenUsage, event))
+        break
+      }
+
       case 'done': {
         // 清理缓冲区
         set({ _subAgentBuf: { text: '', thinking: '', toolCallMap: new Map() } })
         break
       }
     }
+  },
+
+  showCostStats: () => {
+    const s = get()
+    const usage = s.sessionTokenUsage
+    const totalTokens = usage.inputTokens + usage.outputTokens
+    const lines = [
+      '## Token 使用统计（会话累计）',
+      '',
+      `| 项目 | 数量 |`,
+      `|------|------|`,
+      `| 输入 tokens | ${usage.inputTokens.toLocaleString()} |`,
+      `| 输出 tokens | ${usage.outputTokens.toLocaleString()} |`,
+      `| **总计** | **${totalTokens.toLocaleString()}** |`,
+    ]
+    if (usage.cacheReadTokens) {
+      lines.push(`| 缓存命中 | ${usage.cacheReadTokens.toLocaleString()} |`)
+    }
+    if (usage.cacheCreationTokens) {
+      lines.push(`| 缓存创建 | ${usage.cacheCreationTokens.toLocaleString()} |`)
+    }
+    if (usage.reasoningTokens) {
+      lines.push(`| 推理 tokens | ${usage.reasoningTokens.toLocaleString()} |`)
+    }
+
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        {
+          role: 'assistant' as const,
+          content: [{ type: 'text' as const, text: lines.join('\n') }],
+        },
+      ],
+    }))
   },
 }))

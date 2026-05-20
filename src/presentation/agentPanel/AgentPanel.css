@@ -384,6 +384,41 @@
   margin-top: 4px;
 }
 
+/* Token progress bar */
+.token-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.token-label {
+  font-size: 10px;
+  color: #858585;
+  min-width: 32px;
+}
+
+.token-bar-track {
+  flex: 1;
+  height: 4px;
+  background: #3c3c3c;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.token-bar-fill {
+  height: 100%;
+  background: #007acc;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.token-stats {
+  font-size: 10px;
+  color: #858585;
+  white-space: nowrap;
+}
+
 /* Input area */
 .agent-input-area {
   padding: 10px 12px;

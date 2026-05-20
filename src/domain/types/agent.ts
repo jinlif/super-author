@@ -50,6 +50,16 @@ export interface ProviderConfig {
   presetName?: string
 }
 
+// Token 统计
+
+export interface TokenUsage {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens?: number      // Anthropic cache_read / OpenAI cached_tokens
+  cacheCreationTokens?: number  // Anthropic 专属
+  reasoningTokens?: number      // OpenAI 专属 (o1/o3)
+}
+
 // 流式事件（Provider → AgentLoop）
 
 export type AgentStreamEvent =
@@ -58,7 +68,7 @@ export type AgentStreamEvent =
   | { type: 'tool_call_delta'; id: string; arguments: string }
   | { type: 'tool_call_end'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'thinking_delta'; text: string }
-  | { type: 'usage'; inputTokens: number; outputTokens: number }
+  | { type: 'usage'; inputTokens: number; outputTokens: number } & Partial<TokenUsage>
   | { type: 'error'; message: string }
 
 // UI 事件（AgentLoop → UI 组件）
@@ -77,6 +87,7 @@ export type AgentUIEvent =
   | { type: 'turn_start'; turn: number }
   | { type: 'waiting_confirm'; toolName: string; input: Record<string, unknown> }
   | { type: 'done' }
+  | { type: 'usage'; inputTokens: number; outputTokens: number } & Partial<TokenUsage>
   | { type: 'error'; message: string }
   | { type: 'aborted' }
 
@@ -91,6 +102,7 @@ export interface Conversation {
   createdAt: string
   updatedAt: string
   version: number
+  tokenUsage?: TokenUsage
 }
 
 export interface ConversationSummary {

@@ -95,6 +95,17 @@ export class AgentLoop {
             yield { type: 'stream_chunk', text: event.text }
           }
 
+          if (event.type === 'usage') {
+            yield {
+              type: 'usage',
+              inputTokens: event.inputTokens,
+              outputTokens: event.outputTokens,
+              cacheReadTokens: event.cacheReadTokens,
+              cacheCreationTokens: event.cacheCreationTokens,
+              reasoningTokens: event.reasoningTokens,
+            }
+          }
+
           if (event.type === 'thinking_delta') {
             fullThinking += event.text
             yield { type: 'thinking_delta', text: event.text }

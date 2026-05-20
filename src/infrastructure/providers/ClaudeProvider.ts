@@ -166,6 +166,8 @@ export class ClaudeProvider implements IProvider {
           type: "usage",
           inputTokens: event.message.usage.input_tokens ?? 0,
           outputTokens: event.message.usage.output_tokens ?? 0,
+          cacheReadTokens: event.message.usage.cache_read_input_tokens ?? undefined,
+          cacheCreationTokens: event.message.usage.cache_creation_input_tokens ?? undefined,
         };
       }
 
@@ -215,6 +217,8 @@ export class ClaudeProvider implements IProvider {
           type: "usage",
           inputTokens: event.usage.input_tokens ?? 0,
           outputTokens: event.usage.output_tokens ?? 0,
+          cacheReadTokens: event.usage.cache_read_input_tokens ?? undefined,
+          cacheCreationTokens: event.usage.cache_creation_input_tokens ?? undefined,
         };
       }
     }

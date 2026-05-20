@@ -11,6 +11,7 @@ import type { SelectedMention } from "../../domain/types/fileMention";
 import { CommandSuggestions } from "./CommandSuggestions";
 import { FileMentions } from "./FileMentions";
 import { MentionHighlight } from "./MentionHighlight";
+import { TokenProgressBar } from "./TokenProgressBar";
 
 // 检测命令模式：行首 `/` 或空格后 `/`
 function detectCommand(text: string): { active: boolean; query: string } {
@@ -67,6 +68,7 @@ export function AgentInput({
   const setTempChapterData = useAgentStore((s) => s.setTempChapterData);
   const commandRegistry = useAgentStore((s) => s.commandRegistry);
   const clearConversation = useAgentStore((s) => s.clearConversation);
+  const showCostStats = useAgentStore((s) => s.showCostStats);
 
   const activeTabId = useEditorStore((s) => s.activeTabId);
   const tabs = useEditorStore((s) => s.tabs);
@@ -165,6 +167,8 @@ export function AgentInput({
       } else if (command.action === "execute") {
         if (command.name === "new") {
           clearConversation();
+        } else if (command.name === "cost") {
+          showCostStats();
         }
         setInput("");
       } else if (command.action === "fill" && command.prompt) {
@@ -183,7 +187,7 @@ export function AgentInput({
         }, 0);
       }
     },
-    [clearConversation],
+    [clearConversation, showCostStats],
   );
 
   const handleCommandClose = useCallback(() => {
@@ -234,6 +238,9 @@ export function AgentInput({
 
   return (
     <div className="agent-input-area">
+      {/* Token 统计进度条 */}
+      <TokenProgressBar />
+
       {/* Review bar for temp chapters */}
       {tempChapterData && (
         <div className="review-bar">

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useAgentStore } from '../../src/application/stores/agentStore'
+import { accumulateTokenUsage, useAgentStore } from '../../src/application/stores/agentStore'
 
 describe('agentStore', () => {
   beforeEach(() => {
@@ -134,6 +134,64 @@ describe('agentStore', () => {
       expect(msgs).toHaveLength(2)
       expect(msgs[0].source).toBe('sub_agent')
       expect(msgs[1].source).toBe('sub_agent')
+    })
+  })
+
+  describe('token 追踪', () => {
+    it('accumulateTokenUsage 应正确累积基本字段', () => {
+      const session = { inputTokens: 100, outputTokens: 50 }
+      const event = { inputTokens: 200, outputTokens: 80 }
+      const result = accumulateTokenUsage(session, event)
+      expect(result.currentTokenUsage.inputTokens).toBe(200)
+      expect(result.currentTokenUsage.outputTokens).toBe(80)
+      expect(result.sessionTokenUsage.inputTokens).toBe(300)
+      expect(result.sessionTokenUsage.outputTokens).toBe(130)
+    })
+
+    it('accumulateTokenUsage 应正确处理可选字段的 undefined', () => {
+      const session = { inputTokens: 10, outputTokens: 5 }
+      const event = { inputTokens: 20, outputTokens: 8 }
+      const result = accumulateTokenUsage(session, event)
+      expect(result.sessionTokenUsage.cacheReadTokens).toBe(0)
+      expect(result.sessionTokenUsage.cacheCreationTokens).toBe(0)
+      expect(result.sessionTokenUsage.reasoningTokens).toBe(0)
+    })
+
+    it('accumulateTokenUsage 应正确累加可选字段', () => {
+      const session = { inputTokens: 100, outputTokens: 50, cacheReadTokens: 30, reasoningTokens: 10 }
+      const event = { inputTokens: 200, outputTokens: 80, cacheReadTokens: 20, reasoningTokens: 5 }
+      const result = accumulateTokenUsage(session, event)
+      expect(result.sessionTokenUsage.cacheReadTokens).toBe(50)
+      expect(result.sessionTokenUsage.reasoningTokens).toBe(15)
+      expect(result.currentTokenUsage.cacheReadTokens).toBe(20)
+    })
+
+    it('clearConversation 应重置 token 计数器', () => {
+      useAgentStore.setState({
+        sessionTokenUsage: { inputTokens: 1000, outputTokens: 500, cacheReadTokens: 100 },
+        currentTokenUsage: { inputTokens: 200, outputTokens: 80 },
+      })
+      useAgentStore.getState().clearConversation()
+      const state = useAgentStore.getState()
+      expect(state.sessionTokenUsage).toEqual({ inputTokens: 0, outputTokens: 0 })
+      expect(state.currentTokenUsage).toEqual({ inputTokens: 0, outputTokens: 0 })
+    })
+
+    it('handleSubAgentEvent usage 事件应累积 token', () => {
+      const store = useAgentStore.getState()
+      store.handleSubAgentEvent({ type: 'usage', inputTokens: 100, outputTokens: 50 })
+      const s1 = useAgentStore.getState()
+      expect(s1.currentTokenUsage.inputTokens).toBe(100)
+      expect(s1.currentTokenUsage.outputTokens).toBe(50)
+      expect(s1.sessionTokenUsage.inputTokens).toBe(100)
+      expect(s1.sessionTokenUsage.outputTokens).toBe(50)
+
+      store.handleSubAgentEvent({ type: 'usage', inputTokens: 200, outputTokens: 80 })
+      const s2 = useAgentStore.getState()
+      expect(s2.currentTokenUsage.inputTokens).toBe(200)
+      expect(s2.currentTokenUsage.outputTokens).toBe(80)
+      expect(s2.sessionTokenUsage.inputTokens).toBe(300)
+      expect(s2.sessionTokenUsage.outputTokens).toBe(130)
     })
   })
 })

@@ -19,6 +19,12 @@ export class CommandRegistry {
       description: '新建会话',
       action: 'execute',
     })
+    this.commands.push({
+      name: 'cost',
+      category: 'builtin',
+      description: '查看会话 token 消耗',
+      action: 'execute',
+    })
   }
 
   /** 注册自定义命令（替换已有） */
