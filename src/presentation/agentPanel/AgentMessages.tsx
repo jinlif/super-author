@@ -19,7 +19,7 @@ export function AgentMessages() {
         />
       </div>
     ),
-    [isStreaming, messages.length],
+    [isStreaming, messages],
   )
 
   const overscan = useMemo(() => ({ main: 500, reverse: 500 }), [])
