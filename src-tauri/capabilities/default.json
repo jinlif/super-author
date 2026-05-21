@@ -8,6 +8,7 @@
   "permissions": [
     "core:default",
     "dialog:default",
+    "mcp-bridge:default",
     {
       "identifier": "http:default",
       "allow": [

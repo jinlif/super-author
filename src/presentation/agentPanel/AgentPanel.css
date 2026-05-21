@@ -160,7 +160,7 @@
 }
 
 .agent-virtuoso-item {
-  padding: 0 12px 12px 12px;
+  padding: 0 6px 12px 6px;
   overflow: hidden;
 }
 
@@ -188,7 +188,7 @@
 }
 
 .chat-bubble {
-  max-width: 90%;
+  max-width: 100%;
   min-width: 0;
   padding: 8px 12px;
   border-radius: 8px;

@@ -9,20 +9,29 @@ interface MarkdownRendererProps {
   className?: string
 }
 
+/** 递归提取 React 节点中的纯文本 */
+function extractText(node: React.ReactNode): string {
+  if (typeof node === 'string') return node
+  if (typeof node === 'number') return String(node)
+  if (!node) return ''
+  if (Array.isArray(node)) return node.map(extractText).join('')
+  if (typeof node === 'object' && node !== null && 'props' in node) {
+    return extractText((node as {props: {children?: React.ReactNode}}).props.children)
+  }
+  return ''
+}
+
 function CodeBlock({ className, children }: { className?: string; children?: React.ReactNode }) {
   const [copied, setCopied] = useState(false)
   const language = className?.replace('language-', '') ?? ''
 
-  const text = typeof children === 'string' ? children : String(children ?? '')
-  // react-markdown 末尾会带一个换行，去掉
-  const code = text.replace(/\n$/, '')
-
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code).then(() => {
+    const text = extractText(children).replace(/\n$/, '')
+    navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     })
-  }, [code])
+  }, [children])
 
   return (
     <div className="code-block">
@@ -33,7 +42,7 @@ function CodeBlock({ className, children }: { className?: string; children?: Rea
         </button>
       </div>
       <pre className={className}>
-        <code>{code}</code>
+        <code>{children}</code>
       </pre>
     </div>
   )

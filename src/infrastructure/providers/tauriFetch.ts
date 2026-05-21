@@ -91,27 +91,40 @@ export async function loggedFetch(
     const resHeaders: Record<string, string> = {}
     res.headers.forEach((value, key) => { resHeaders[key] = value })
 
+    // 异步记录响应日志，不阻塞流式传输
     const cloned = res.clone()
-    let resBody: string | null = null
-    try {
-      resBody = await cloned.text()
-    } catch {
-      resBody = '[unreadable stream]'
-    }
-
-    addLog({
-      id,
-      timestamp: new Date().toISOString(),
-      request: { method, url, headers: reqHeaders, body: reqBody },
-      response: {
-        status: res.status,
-        statusText: res.statusText,
-        headers: resHeaders,
-        body: resBody,
+    cloned.text().then(
+      (resBody) => {
+        addLog({
+          id,
+          timestamp: new Date().toISOString(),
+          request: { method, url, headers: reqHeaders, body: reqBody },
+          response: {
+            status: res.status,
+            statusText: res.statusText,
+            headers: resHeaders,
+            body: resBody,
+          },
+          error: null,
+          durationMs,
+        })
       },
-      error: null,
-      durationMs,
-    })
+      () => {
+        addLog({
+          id,
+          timestamp: new Date().toISOString(),
+          request: { method, url, headers: reqHeaders, body: reqBody },
+          response: {
+            status: res.status,
+            statusText: res.statusText,
+            headers: resHeaders,
+            body: '[unreadable stream]',
+          },
+          error: null,
+          durationMs,
+        })
+      },
+    )
 
     return res
   } catch (err) {
