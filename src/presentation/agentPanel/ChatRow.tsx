@@ -30,6 +30,12 @@ type ContentGroup =
 function getToolSummary(name: string, input?: Record<string, unknown>): string {
   if (!input) return ''
 
+  // agent/subagent → 显示任务描述
+  if (name === 'agent') {
+    const prompt = (input.prompt ?? '') as string
+    return prompt ? truncate(prompt, 60) : ''
+  }
+
   // 读取/写入/编辑文件类工具 → 显示路径
   if (
     ['read_file', 'write_file', 'edit_file', 'readFile', 'writeFile', 'editFile'].includes(name)

@@ -514,6 +514,27 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             }
             break
 
+          case 'tool_dispatching':
+            // agent 工具：派遣时立即显示 tool_use 记录（prompt 作为摘要）
+            if (event.toolName === 'agent') {
+              set((state) => {
+                const msgs = state.messages.map((m) => ({ ...m, content: [...m.content] }))
+                const mainMsg = [...msgs].reverse().find(
+                  (m) => m.role === 'assistant' && m.source !== 'sub_agent',
+                )
+                if (mainMsg) {
+                  mainMsg.content.push({
+                    type: 'tool_use',
+                    id: event.toolId,
+                    name: event.toolName,
+                    input: event.input,
+                  })
+                }
+                return { messages: msgs }
+              })
+            }
+            break
+
           case 'waiting_confirm': {
             const toolName = event.toolName
             const input = event.input
@@ -569,25 +590,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           }
 
           case 'tool_complete': {
-            // agent 工具：记录 tool_use 到主 Agent 消息，SubAgent 内容已独立展示
+            // agent 工具：tool_use 已在 tool_dispatching 中添加，SubAgent 内容独立展示，跳过
             if (event.toolName === 'agent') {
-              set((state) => {
-                const msgs = state.messages.map((m) => ({ ...m, content: [...m.content] }))
-                const mainMsg = [...msgs].reverse().find((m) => m.role === 'assistant' && m.source !== 'sub_agent')
-                if (mainMsg) {
-                  mainMsg.content.push({
-                    type: 'tool_use',
-                    id: event.toolId,
-                    name: event.toolName,
-                    input: event.input,
-                  })
-                  mainMsg.content.push({
-                    type: 'text',
-                    text: `\n\n[工具 ${event.toolName} 执行完成:\n${event.result}]`,
-                  })
-                }
-                return { messages: msgs }
-              })
               break
             }
 

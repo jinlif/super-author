@@ -77,6 +77,7 @@ export type AgentUIEvent =
   | { type: 'stream_chunk'; text: string }
   | { type: 'thinking_delta'; text: string }
   | { type: 'tool_executing'; toolId: string; toolName: string }
+  | { type: 'tool_dispatching'; toolId: string; toolName: string; input: Record<string, unknown> }
   | {
       type: 'tool_complete'
       toolId: string

@@ -164,6 +164,11 @@ export class AgentLoop {
         currentMessages = [...currentMessages, { role: 'assistant', content: assistantBlocks }]
       }
 
+      // 通知 UI：工具即将执行（携带完整 input）
+      for (const tc of toolCalls) {
+        yield { type: 'tool_dispatching', toolId: tc.id, toolName: tc.name, input: tc.input }
+      }
+
       // 如果没有工具调用，本轮结束
       if (toolCalls.length === 0) {
         yield { type: 'done' }
